@@ -1,0 +1,15 @@
+//texed 1.0
+
+%include once
+io {
+	function print(to_prt) {
+		tmp_str = to_prt.toString()
+		__prints(tmp_str)
+	}
+	function println(to_prt) {
+		print(to_prt.toString+"\n")
+	}
+	function read(##str_read) {
+		str_read = __readkb()
+	}
+}
