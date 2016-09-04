@@ -1,11 +1,13 @@
+#include "stdlib.h"
+#include "stdbool.h"
 #include "types.h"
 #include "tokens.h"
 #include "error.h"
 
-#define NULL 0
 #define VAL_SIZE 64
 
-int count_position = 0, current_position = 0;
+int count_position = 0;
+int current_position = 0;
 Token *tokens = NULL;
 Token *tokentmp;
 
@@ -18,9 +20,9 @@ int addToken(TokenType type, const char *value) {
 
 	if (tokentmp != NULL) {
 		tokens = tokentmp;
-		tokens[count_position].ttype = type; // assign token type
-		tokens[count_position].tvalue = (char*)malloc(VAL_SIZE * sizeof(char*)); // value (string) !NEED UPDATE TO UNION
-		strcpy(tokens[count_position].tvalue, value);
+		tokens[count_position].type = type; // assign token type
+		tokens[count_position].value = (char*)malloc(VAL_SIZE * sizeof(char*)); // value (string) !NEED UPDATE TO UNION
+		strcpy(tokens[count_position].value, value);
 	}
 	else {
 		free(tokens);
@@ -30,18 +32,36 @@ int addToken(TokenType type, const char *value) {
 
 	return count_position++;
 }
-int getToken(int position, TokenType *type, char *value) {
-	if (position < count_position) {
-		*type = tokens[position].ttype;
-		strcpy(value, tokens[position].tvalue);
-		//printf("val = %s\n", tokens[position].tvalue);
-		return position;
-	}
-	else {
-		//writeError(NULL, "No such token");
-		return -1;
-	}
+TokenType getType() {
+	return tokens[current_position].type;
 }
-int getNextToken(TokenType *type, char *value) {
-	return getToken(current_position++, type, value);
+Token getToken() {
+	if (current_position < count_position) {
+		return tokens[current_position];
+	}
+	Token eof;
+	eof.type = ttEOF;
+	eof.value = NULL;
+	return eof;
+}
+Token getNextToken() {
+	if (current_position < count_position) {
+		return tokens[current_position++];
+	}
+	Token eof;
+	eof.type = ttEOF;
+	eof.value = NULL;
+	return eof;
+}
+bool tokenMatch(TokenType type) {
+	if (type != getType())
+		return false;
+	current_position++;
+	return true;
+}
+
+void printList() {
+	for (int i = 0; i < count_position;i++) {
+		printf("%d:%s\n", tokens[i].type, tokens[i].value);
+	}
 }

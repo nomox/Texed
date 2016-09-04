@@ -1,8 +1,9 @@
 #include "stdio.h"
+#include "stdlib.h"
+#include "stdbool.h"
 #include "ctype.h"
 #include "types.h"
 #include "tokens.h"
-#include "stdbool.h"
 #include "error.h"
 
 #define LN_SIZE 512
@@ -14,6 +15,13 @@ void tokenizeLine(char*);
 void tokenizeWord();
 void tokenizeString();
 void tokenizeNumber();
+void tokenizeHex();
+bool isAvailableName(char);
+bool isAvailableNumber(char);
+bool isAvailableHexNumber(char);
+int indexOf(const char*, const char);
+
+enum {numINT, numFLOAT}; // number types
 
 const char OPERATION_CHARS[] = "+-*/:.,()[]{}#=&$%@!?";
 const TokenType OPERATION_TOKEN[] = {
@@ -24,8 +32,8 @@ const TokenType OPERATION_TOKEN[] = {
 	ttEXDENT,
 	ttDOT,
 	ttCOMMA,
-	ttBOPEN,
-	ttBCLOSE,
+	ttPOPEN,
+	ttPCLOSE,
 	ttSQOPEN,
 	ttSQCLOSE,
 	ttOPENBLOCK,
@@ -120,6 +128,9 @@ void tokenizeLine(char *line) {
 		if (isalpha(source[position]) || source[position] == '_') { // checking for variables
 			tokenizeWord();
 		}
+		else if (source[position] == '0' && source[position+1] == 'x') {
+			tokenizeHex();
+		}
 		else if (isdigit(source[position])) { // value
 			tokenizeNumber();
 		}
@@ -164,12 +175,37 @@ void tokenizeString() {
 	addToken(ttSTRING, buffer);
 }
 void tokenizeNumber() {
+	int num_type = numINT;
 	char buffer[VAL_SIZE] = "";
 	int bufpos = 0;
+	int pc = 0;
 	while (isAvailableNumber(source[position])) {
+		if (source[position] == '.') {
+			if (pc > 0) {
+				writeError(erNULL, "invalid FloatNumber");
+			}
+			pc++;
+			num_type = numFLOAT;
+		}
 		buffer[bufpos++] = source[position++];
 	}
-	addToken(ttNUMBER, buffer);
+	switch (num_type) {
+		case numINT:
+			addToken(ttNUMBER, buffer);
+			break;
+		case numFLOAT:
+			addToken(ttFLOATNUM, buffer);
+			break;
+	}
+}
+void tokenizeHex() {
+	char buffer[VAL_SIZE] = "";
+	int bufpos = 0;
+	position += 2;
+	while (isAvailableHexNumber(source[position])) {
+		buffer[bufpos++] = source[position++];
+	}
+	addToken(ttHEXNUM, buffer);
 }
 TokenType getTokenByChar(const char c) {
 	int idx = indexOf(OPERATION_CHARS, c);
@@ -183,5 +219,44 @@ TokenType getTokenByWord(const char *s) {
 			return WORD_TOKEN[i];
 		}
 	}
-	return ttNULL; // ���� �� �� �������� �����
+	return ttNULL;
+}
+
+// tools
+
+bool isAvailableName(char c) {
+	if (c >= 'a' && c <= 'z')
+		return true;
+	if (c >= 'A' && c <= 'Z')
+		return true;
+	if (c >= '0' && c <= '9')
+		return true;
+	if (c == '_')
+		return true;
+	return false;
+}
+bool isAvailableNumber(char c) {
+	if (c >= '0' && c <= '9')
+		return true;
+	if (c == '.')
+		return true;
+	return false;
+}
+bool isAvailableHexNumber(char c) {
+	if (c >= '0' && c <= '9')
+		return true;
+	if (c >= 'A' && c <= 'F')
+		return true;
+	if (c >= 'a' && c <= 'f')
+		return true;
+	if (c == '.')
+		writeError(erNULL, "invalid HexNumber");
+	return false;
+}
+int indexOf(const char *s, const char c) {
+	const char *p = strchr(s, c);
+	if (p) {
+		return p - s;
+	}
+	return -1;
 }

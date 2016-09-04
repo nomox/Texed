@@ -5,7 +5,10 @@ typedef enum ERRORTYPE {
 	erVARNOTEXIST,
 	erERRORVARISNULL,
 	erMEMORYREALLOCATION,
-	erSYNTAX
+	erSYNTAX,
+	erZERODIVISION,
+	erEXPECTATION,
+	erUNKNOWNLEXEM
 } ErrorType;
 
 int write_errors;

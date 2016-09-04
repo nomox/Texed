@@ -2,7 +2,7 @@
 
 typedef enum TOKENTYPE
 {
-	ttNULL,
+	ttNULL, // 0
 	ttWHITESPACE,
 	ttEOL, // end of line
 	ttEOF, // end of file
@@ -10,20 +10,22 @@ typedef enum TOKENTYPE
 	ttVARIABLE,
 	// value
 	ttNUMBER, // 123
+	ttHEXNUM, // 0xf1
+	ttFLOATNUM, // 2.0
 	ttSTRING, // "abc"
 
 	ttDOT, // .
-	ttCOMMA, // ,
+	ttCOMMA, // , 10
 	ttGHOST, // #
 	ttASSIGN, // =
 	ttEXDENT, // :
 	ttOPENBLOCK, // {
 	ttCLOSEBLOCK, // }
-	ttBOPEN, // (
-	ttBCLOSE, // )
+	ttPOPEN, // (
+	ttPCLOSE, // )
 	ttSQOPEN, // [
 	ttSQCLOSE, // ]
-	ttPUBLIC, // &
+	ttPUBLIC, // & 20
 	ttPRIVATE, // $
 	ttPACK, // %
 	ttEVENT, // @
@@ -36,7 +38,7 @@ typedef enum TOKENTYPE
 	ttOR, // or
 	ttAND, // and
 	ttNOT, // !
-	ttISTRUE, // ?
+	ttISTRUE, // ? 30
 	// statement
 	ttIF, // if
 	ttELSE, // else

@@ -1,7 +1,5 @@
 #pragma once
 
-#define NULL 0
-
 typedef enum VARTYPE {
 	NUMBER,
 	STRING,
