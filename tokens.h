@@ -10,7 +10,9 @@ typedef struct TOKEN {
 int addToken(TokenType type, const char *value);
 // int getToken(int position, TokenType *type, char *value);
 // int getNextToken(TokenType *type, char *value);
-TokenType getType();
 Token getNextToken();
 Token getToken();
-bool tokenMatch();
+Token getTokenOffset(int);
+bool tokenMatch(TokenType);
+void tokenMiss(TokenType);
+int getLine();

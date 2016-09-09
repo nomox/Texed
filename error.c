@@ -1,23 +1,28 @@
 #include "error.h"
+#include "tokens.h"
 
 write_errors = 0;
 void writeError(ErrorType et, char *msg) {
 	if (write_errors)
 		switch (et) {
-		case erVARNOTEXIST: printf("Error: ~Variable \"%s\" does not exist\n", msg);
+		case erVARNOTEXIST: printf("\nError: Variable \"%s\" not defined (at line %d)", msg, getLine());
 			break;
-		case erMEMORYREALLOCATION: printf("~Error: memory reallocation\n");
+		case erMEMORYREALLOCATION: printf("\n~Error: memory reallocation");
 			break;
-		case erSYNTAX: printf("Error: Lexer: Syntax\n");
+		case erSYNTAX: printf("\nError: Lexer: Syntax");
 			break;
-		case erZERODIVISION: printf("Error: Zero division\n");
+		case erZERODIVISION: printf("\nError: Zero division (at line %d)", getLine());
 				break;
-		case erEXPECTATION: printf("Error: '%s' expected\n", msg);
+		case erEXPECTATION: printf("\nError: '%s' expected (at line %d)", msg, getLine());
 				break;
-		case erUNKNOWNLEXEM: printf("Error: Unknown lexem '%s'\n", msg);
+		case erSTATEMENT: printf("\nError: 'nil' statement (at line %d)", getLine());
+				break;
+		case erUNKNOWNLEXEM: printf("\nError: Unknown lexem '%s' (at line %d)", msg, getLine());
+				break;
+		case erOUTOFMEMORY: printf("\nError: Out of memory");
 				break;
 		case erNULL:
-		default: printf("Error: ~%s\n", msg);
+		default: printf("\nError: ~%s", msg);
 			break;
 		}
 	exit(0);

@@ -29,16 +29,18 @@ typedef enum TOKENTYPE
 	ttPRIVATE, // $
 	ttPACK, // %
 	ttEVENT, // @
+	ttLT, // <
+	ttGT, // >
 	//binary operation
 	ttPLUS, // +
 	ttMINUS, // -
 	ttMULTIPLY, // *
 	ttDIVIDE, // /
 	// logic
-	ttOR, // or
+	ttOR, // or 30
 	ttAND, // and
 	ttNOT, // !
-	ttISTRUE, // ? 30
+	ttISTRUE, // ?
 	// statement
 	ttIF, // if
 	ttELSE, // else
@@ -47,9 +49,6 @@ typedef enum TOKENTYPE
 
 	ttFOR, // for
 	ttWHILE, // while
-	ttTO, // to
-	ttSTEP, // step
-	ttTIMES, // times
 	ttDO, // do
 	// reserved words
 	ttFUNCTION, // function
@@ -58,5 +57,8 @@ typedef enum TOKENTYPE
 	ttUSE, // use
 	ttNIL, // nil
 	ttTRUE, // true
-	ttFALSE // false
+	ttFALSE, // false
+	ttPRINT, // print
+	ttERROR, // error
+	ttDELETE // delete
 } TokenType;

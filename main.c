@@ -2,18 +2,19 @@
 #include "stdlib.h"
 #include "stdbool.h"
 #include "string.h"
-#include "variables.h"
-#include "error.h"
+#include "memory.h"
 #include "types.h"
+#include "error.h"
 
-int main() {
+int main(int argc, char *argv[]) {
+	// texed script.xrs -m=64
+
 	write_errors = 1;
-	/*
-	char* path[80];
-	getcwd(path, 80);
-	printf("%s\n", path);
-	*/
+
+	system("chcp 1251 > nul"); // set encoding
 	printf("X!!\n");
+
+	memoryInit(1024*1024); // alloc mem. size 1 мегабайт хватить
 
 	char fname[] = "script.xrs";
 	FILE *f;
@@ -29,14 +30,6 @@ int main() {
 
 	TokenType t;
 	char kek[64];
-
-	/*
-	int addr = addVar("kek", "10", NUMBER);
-	addr = addVar("v1", "1488", NUMBER);
-	printf("%s\n", getVarValue("v1"));
-	getVarValueByAddr(1488);
-	*/
-
 	//getch();
 	return 0;
 }

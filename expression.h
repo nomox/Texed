@@ -1,26 +1,28 @@
 #pragma once
 
+#include "memory.h"
+
 typedef enum OPERATION {
   opMUL,
   opDIV,
   opADD,
   opSUB,
-  opNEGNUM // negative number
+  opNEGNUM, // negative number
+  opGRTH,
+  opLSTH,
+  opEQ
 } Operation;
-typedef enum RESULT_TYPE {
-  rtNUMBER,
-  rtSTRING
-} ResultType;
 typedef struct EXPRESSION {
-  ResultType type;
-  union RESULT {
-    float f; // number float
-    int i; // number float
-    char *s; // string
-  } result;
+  DataType type;
+  Data result;
   void* (*get)(struct Expression*);
 } Expression;
 
+Expression* variableExpression(char*);
 Expression* numberExpression(int);
+Expression* stringExpression(char*);
+Expression* boolExpression(bool);
+Expression* nilExpression();
 Expression* unaryExpression(Operation, Expression*);
 Expression* binaryExpression(Operation, Expression*, Expression*);
+Expression* conditionalExpression(Operation, Expression*, Expression*);

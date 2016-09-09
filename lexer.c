@@ -6,25 +6,27 @@
 #include "tokens.h"
 #include "error.h"
 
-#define LN_SIZE 512
-#define VAL_SIZE 64
+#define LN_SIZE 512 // max line size
+#define VAL_SIZE 64 // max value size
 #define VAL_EMPTY ""
 
+void tokenize(FILE *f);
+static void tokenizeLine(char*);
+static void tokenizeWord();
+static void tokenizeString();
+static void tokenizeNumber();
+static void tokenizeHex();
+static bool isAvailableName(char);
+static bool isAvailableNumber(char);
+static bool isAvailableHexNumber(char);
+static int indexOf(const char*, const char);
+static TokenType getTokenByChar(const char c);
+static TokenType getTokenByWord(const char *s);
 
-void tokenizeLine(char*);
-void tokenizeWord();
-void tokenizeString();
-void tokenizeNumber();
-void tokenizeHex();
-bool isAvailableName(char);
-bool isAvailableNumber(char);
-bool isAvailableHexNumber(char);
-int indexOf(const char*, const char);
+static enum {numINT, numFLOAT}; // number types
 
-enum {numINT, numFLOAT}; // number types
-
-const char OPERATION_CHARS[] = "+-*/:.,()[]{}#=&$%@!?";
-const TokenType OPERATION_TOKEN[] = {
+static const char OPERATION_CHARS[] = "+-*/:.,()[]{}#=&$%@!?<>";
+static const TokenType OPERATION_TOKEN[] = {
 	ttPLUS,
 	ttMINUS,
 	ttMULTIPLY,
@@ -45,9 +47,11 @@ const TokenType OPERATION_TOKEN[] = {
 	ttPACK,
 	ttEVENT,
 	ttNOT,
-	ttISTRUE
+	ttISTRUE,
+	ttLT,
+	ttGT
 };
-const char *WORD_STRINGS[] = {
+static const char *WORD_STRINGS[] = {
 	"if",
 	"else",
 	"switch",
@@ -56,8 +60,6 @@ const char *WORD_STRINGS[] = {
 	"and",
 	"for",
 	"while",
-	"to",
-	"times",
 	"do",
 	"function",
 	"this",
@@ -65,9 +67,12 @@ const char *WORD_STRINGS[] = {
 	"use",
 	"nil",
 	"true",
-	"false"
+	"false",
+	"print",
+	"error",
+	"delete"
 };
-const TokenType WORD_TOKEN[] = {
+static const TokenType WORD_TOKEN[] = {
 	ttIF,
 	ttELSE,
 	ttSWITCH,
@@ -76,8 +81,6 @@ const TokenType WORD_TOKEN[] = {
 	ttAND,
 	ttFOR,
 	ttWHILE,
-	ttTO,
-	ttTIMES,
 	ttDO,
 	ttFUNCTION,
 	ttTHIS,
@@ -85,16 +88,16 @@ const TokenType WORD_TOKEN[] = {
 	ttUSE,
 	ttNIL,
 	ttTRUE,
-	ttFALSE
+	ttFALSE,
+	ttPRINT,
+	ttERROR,
+	ttDELETE
 };
-bool skip = false;
-int nline = 0;
-char *source;
-int position = 0;
-TokenType tt;
-
-TokenType getTokenByChar(const char c);
-TokenType getTokenByWord(const char *s);
+static bool skip = false;
+static int nline = 0;
+static char *source;
+static int position = 0;
+static TokenType tt;
 
 void tokenize(FILE *f) {
 	char tmp_line[LN_SIZE];
@@ -102,17 +105,18 @@ void tokenize(FILE *f) {
 		tokenizeLine(tmp_line);
 		//printf("line: %d\n", nline);
 	}
+	addToken(ttEOF, "");
 }
 
-void tokenizeLine(char *line) {
+static void tokenizeLine(char *line) {
 	source = line;
 	nline++;
-	while (source[position] != '\0') { // vars and reserved words
+	while (source[position] != '\0') { // поки не символ закінчення
 		// обробка коментарів
 		if (source[position] == '/' && source[position + 1] == '/') {
 			break; //  якщо коментар // то пропускаєм строку
 		}
-		else if (source[position] == '*' && source[position + 1] == '/') {
+		else if (source[position] == '*' && source[position + 1] == '/') { // закрити багаторядковий коментар
 			skip = false;
 			position += 2;
 		}
@@ -128,7 +132,7 @@ void tokenizeLine(char *line) {
 		if (isalpha(source[position]) || source[position] == '_') { // checking for variables
 			tokenizeWord();
 		}
-		else if (source[position] == '0' && source[position+1] == 'x') {
+		else if (source[position] == '0' && source[position + 1] == 'x') {
 			tokenizeHex();
 		}
 		else if (isdigit(source[position])) { // value
@@ -146,10 +150,11 @@ void tokenizeLine(char *line) {
 			position++; // якщо попадаєть лєва шняга то пропускаєм
 		}
 	}
+	//if (position > 0 && !skip)
 	addToken(ttEOL, VAL_EMPTY); // end of line
 	position = 0;
 }
-void tokenizeWord() {
+static void tokenizeWord() {
 	TokenType tt;
 	char buffer[VAL_SIZE] = "";
 	int bufpos = 0;
@@ -164,24 +169,37 @@ void tokenizeWord() {
 	else
 		addToken(ttVARIABLE, buffer);
 }
-void tokenizeString() {
+static void tokenizeString() {
 	char buffer[VAL_SIZE] = "";
 	int bufpos = 0;
 	position++;
-	while (source[position] != '\"') {
+	for (;;) {
+		// чекаєм чи є спец символи тіпа \n \t \\ \"
+		if (source[position] == '\\') {
+			position++; // пропускаєм ту фігню
+			switch (source[position]) {
+			case '"': buffer[bufpos++] = '\"'; position++; continue;
+			case 'n': buffer[bufpos++] = '\n'; position++; continue;
+			case 't': buffer[bufpos++] = '\t'; position++; continue;
+			}
+			buffer[bufpos++] = '\\';
+		}
+		if (source[position] == '\"')
+			break;
 		buffer[bufpos++] = source[position++];
 	}
 	position++;
 	addToken(ttSTRING, buffer);
 }
-void tokenizeNumber() {
+static void tokenizeNumber() {
+	// перепписати ту фігню тре
 	int num_type = numINT;
 	char buffer[VAL_SIZE] = "";
 	int bufpos = 0;
 	int pc = 0;
 	while (isAvailableNumber(source[position])) {
-		if (source[position] == '.') {
-			if (pc > 0) {
+		if (source[position] == '.') { // чекаєм чи дійсне число
+			if (pc > 0) { // якщо більше чим 1 то кажем: Каліцькие Число (насправді той хто писав таку прогу каліка)
 				writeError(erNULL, "invalid FloatNumber");
 			}
 			pc++;
@@ -198,7 +216,7 @@ void tokenizeNumber() {
 			break;
 	}
 }
-void tokenizeHex() {
+static void tokenizeHex() {
 	char buffer[VAL_SIZE] = "";
 	int bufpos = 0;
 	position += 2;
@@ -207,13 +225,13 @@ void tokenizeHex() {
 	}
 	addToken(ttHEXNUM, buffer);
 }
-TokenType getTokenByChar(const char c) {
+static TokenType getTokenByChar(const char c) {
 	int idx = indexOf(OPERATION_CHARS, c);
 	if (idx == -1)
 		return ttNULL;
 	return OPERATION_TOKEN[idx];
 }
-TokenType getTokenByWord(const char *s) {
+static TokenType getTokenByWord(const char *s) {
 	for (int i = 0; i < (sizeof(WORD_STRINGS) / sizeof(*WORD_STRINGS));i++) {
 		if (!strcmp(WORD_STRINGS[i], s)) {
 			return WORD_TOKEN[i];
@@ -224,7 +242,7 @@ TokenType getTokenByWord(const char *s) {
 
 // tools
 
-bool isAvailableName(char c) {
+static bool isAvailableName(char c) {
 	if (c >= 'a' && c <= 'z')
 		return true;
 	if (c >= 'A' && c <= 'Z')
@@ -235,14 +253,14 @@ bool isAvailableName(char c) {
 		return true;
 	return false;
 }
-bool isAvailableNumber(char c) {
+static bool isAvailableNumber(char c) {
 	if (c >= '0' && c <= '9')
 		return true;
 	if (c == '.')
 		return true;
 	return false;
 }
-bool isAvailableHexNumber(char c) {
+static bool isAvailableHexNumber(char c) {
 	if (c >= '0' && c <= '9')
 		return true;
 	if (c >= 'A' && c <= 'F')
@@ -253,7 +271,7 @@ bool isAvailableHexNumber(char c) {
 		writeError(erNULL, "invalid HexNumber");
 	return false;
 }
-int indexOf(const char *s, const char c) {
+static int indexOf(const char *s, const char c) {
 	const char *p = strchr(s, c);
 	if (p) {
 		return p - s;
