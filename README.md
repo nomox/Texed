@@ -14,3 +14,7 @@ Version history:
 -Variables
 -Operators: print, error, delete
 -if/else statement
+0.2
+-new expression builder
+-while statement
+-operator block

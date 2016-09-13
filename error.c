@@ -15,8 +15,6 @@ void writeError(ErrorType et, char *msg) {
 				break;
 		case erEXPECTATION: printf("\nError: '%s' expected (at line %d)", msg, getLine());
 				break;
-		case erSTATEMENT: printf("\nError: 'nil' statement (at line %d)", getLine());
-				break;
 		case erUNKNOWNLEXEM: printf("\nError: Unknown lexem '%s' (at line %d)", msg, getLine());
 				break;
 		case erOUTOFMEMORY: printf("\nError: Out of memory");

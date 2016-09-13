@@ -42,16 +42,7 @@ static TokenType getType() {
 	}*/
 	return getToken().type;
 }
-Token getToken() {
-	if (current_position < count_position) {
-		return tokens[current_position];
-	}
-	Token eof;
-	eof.type = ttEOF;
-	eof.value = NULL;
-	return eof;
-}
-Token getTokenOffset(int offset) {
+Token getTokenAt(int offset) {
 	if (current_position + offset < count_position) {
 		return tokens[current_position + offset];
 	}
@@ -59,6 +50,17 @@ Token getTokenOffset(int offset) {
 	eof.type = ttEOF;
 	eof.value = NULL;
 	return eof;
+}
+Token getToken() {
+	/*
+	if (current_position < count_position) {
+		return tokens[current_position];
+	}
+	Token eof;
+	eof.type = ttEOF;
+	eof.value = NULL;
+	return eof;*/
+	return getTokenAt(0);
 }
 Token getNextToken() {
 	if (current_position < count_position) {
@@ -76,7 +78,7 @@ bool tokenMatch(TokenType type) {
 	current_position++;
 	return true;
 }
-void tokenMiss(TokenType type) {
+void tokenSkip(TokenType type) {
 	while (tokenMatch(ttEOL));
 }
 int getLine() {

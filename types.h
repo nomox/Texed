@@ -49,7 +49,7 @@ typedef enum TOKENTYPE
 
 	ttFOR, // for
 	ttWHILE, // while
-	ttDO, // do
+	ttDO, // do 40
 	// reserved words
 	ttFUNCTION, // function
 	ttTHIS, // this
@@ -60,5 +60,5 @@ typedef enum TOKENTYPE
 	ttFALSE, // false
 	ttPRINT, // print
 	ttERROR, // error
-	ttDELETE // delete
+	ttDELETE // delete 50
 } TokenType;

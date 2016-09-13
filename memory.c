@@ -79,12 +79,20 @@ static int memoryEmptyPosition() {
   return position++;
 }
 // tools
-Record *newRecordNumber(char *name, int number) {
+Record *newRecordInteger(char *name, int number) {
   Record *record;
   record = (Record*)malloc(sizeof(Record));
   record->name = name;
-  record->type = dtNUMBER;
+  record->type = dtINTEGER;
   record->data.i = number;
+  return record;
+}
+Record *newRecordFloat(char *name, float number) {
+  Record *record;
+  record = (Record*)malloc(sizeof(Record));
+  record->name = name;
+  record->type = dtFLOAT;
+  record->data.f = number;
   return record;
 }
 Record *newRecordString(char *name, char* string) {
@@ -93,5 +101,20 @@ Record *newRecordString(char *name, char* string) {
   record->name = name;
   record->type = dtSTRING;
   record->data.s = string;
+  return record;
+}
+Record *newRecordBoolean(char *name, bool boolean) {
+  Record *record;
+  record = (Record*)malloc(sizeof(Record));
+  record->name = name;
+  record->type = dtBOOLEAN;
+  record->data.b = boolean;
+  return record;
+}
+Record *newRecordNil(char *name) {
+  Record *record;
+  record = (Record*)malloc(sizeof(Record));
+  record->name = name;
+  record->type = dtNIL;
   return record;
 }

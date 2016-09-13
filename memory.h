@@ -5,7 +5,8 @@
 typedef enum DATA_TYPE {
   dtDELETED,
   dtNIL,
-  dtNUMBER,
+  dtINTEGER,
+  dtFLOAT,
   dtSTRING,
   dtBOOLEAN,
   dtLINK
@@ -30,5 +31,9 @@ void memorySet(Record*);
 Record *memoryGet(const char*);
 void memoryDelete(const char*);
 int memoryPosition(const char*);
-Record *newRecordNumber(char*, int);
+
+Record *newRecordInteger(char*, int);
+Record *newRecordFloat(char*, float);
 Record *newRecordString(char*, char*);
+Record *newRecordBoolean(char*, bool);
+Record *newRecordNil(char*);

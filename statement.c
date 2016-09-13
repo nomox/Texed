@@ -2,58 +2,99 @@
 #include "stdbool.h"
 #include "statement.h"
 #include "memory.h"
+#include "expression.h"
 #include "error.h"
 
 static Statement *buildStatement();
 
 static void _assign_stat(Statement *s) {
   StatementAssign *st = s->statement;
+  expression_value_t *eval = getValueExpression(st->expression);
   // assign controller
-  if (st->expression->type == dtNUMBER)
-    memorySet(newRecordNumber(st->name, st->expression->get(st->expression)));
-  if (st->expression->type == dtSTRING)
-    memorySet(newRecordString(st->name, st->expression->get(st->expression)));
-  free(st->expression); // звільняєм память щоб нас не сварили
-  free(st);
+  if (eval->type == dtINTEGER)
+    memorySet(newRecordInteger(st->name, eval->value.i));
+  if (eval->type == dtFLOAT)
+    memorySet(newRecordFloat(st->name, eval->value.f));
+  if (eval->type == dtSTRING)
+    memorySet(newRecordString(st->name, eval->value.s));
+  if (eval->type == dtBOOLEAN)
+    memorySet(newRecordBoolean(st->name, eval->value.b));
+  if (eval->type == dtNIL)
+    memorySet(newRecordNil(st->name));
+  //free(st->expression); // звільняєм память щоб нас не сварили
+  //free(st);
 }
 static void _condition_stat(Statement *s) {
   StatementCondition *st = s->statement;
-  bool res = st->expression->get(st->expression);
+  expression_value_t *eval = getValueExpression(st->expression);
+  if (eval->type != dtBOOLEAN)
+    writeError(erEXPECTATION, "<BOOLEAN EXPRESSION>");
+  bool res = eval->value.b;
   if (res) {
     st->ifSt->execute(st->ifSt);
   }
   else if (st->elseSt != NULL) {
     st->elseSt->execute(st->elseSt);
   }
-  free(st->expression);
-  free(st);
+  //free(st->expression);
+  //free(st);
+}
+static void _while_stat(Statement *s) {
+  StatementWhile *st = s->statement;
+  expression_value_t *eval = getValueExpression(st->expression);
+  if (eval->type != dtBOOLEAN)
+    writeError(erEXPECTATION, "<BOOLEAN EXPRESSION>");
+  while (eval->value.b) {
+    // зациклення UPD: походу тому що очищуєм об'єкти
+    st->whileSt->execute(st->whileSt);
+    eval = getValueExpression(st->expression); // get new results
+  }
+  //free(st->expression);
+  //free(st);
 }
 static void _print_stat(Statement *s) {
   StatementPrint *st = s->statement;
-  if (st->expression->type == dtNUMBER) // print number
-    printf("%d", st->expression->get(st->expression));
-  if (st->expression->type == dtSTRING) // print string
-    printf(st->expression->get(st->expression));
-  if (st->expression->type == dtBOOLEAN) // print boolean
-    printf(st->expression->get(st->expression)?"true":"false");
-  if (st->expression->type == dtNIL) // print nil
+  expression_value_t *eval = getValueExpression(st->expression);
+
+  if (eval->type == dtINTEGER) // print number
+    printf("%d", eval->value.i);
+  if (eval->type == dtSTRING) // print string
+    printf(eval->value.s);
+  if (eval->type == dtBOOLEAN) // print boolean
+    printf((eval->value.b)?"true":"false");
+  if (eval->type == dtNIL || eval->type == dtDELETED) // print nil
     printf("nil");
-  free(st->expression); // звільняєм память щоб нас не сварили
-  free(st);
+  //free(st->expression); // звільняєм память щоб нас не сварили
+  //free(st);
 }
 static void _error_stat(Statement *s) {
-  StatementPrint *st = s->statement;
-  if (st->expression->type == dtSTRING)
-    printf(st->expression->get(st->expression));
+  StatementError *st = s->statement;
+  expression_value_t *eval = getValueExpression(st->expression);
+  if (eval->type == dtSTRING)
+    printf(eval->value.s);
   else
-    writeError(erEXPECTATION, "<EXPRESSION>");
-  free(st->expression); // звільняєм память щоб нас не сварили
-  free(st);
+    writeError(erEXPECTATION, "<String>");
+  //free(st->expression); // звільняєм память щоб нас не сварили
+  //free(st);
   exit(0);
 }
 static void _delete_stat(Statement *s) {
   StatementAssign *st = s->statement;
   memoryDelete(st->name);
+}
+static void _block_stat(Statement *s) {
+  // УВАГА! не виконані statement не очищаються
+  StatementBlock *st = s->statement;
+
+  statement_node_t *current = st->list;
+  Statement *tmp;
+  while (current != NULL) {
+    tmp = current->value;
+    tmp->execute(tmp);
+    current = current->next;
+  }
+  //free(st->list);
+  //free(st);
 }
 
 Statement *AssignStatement(char *name, Expression *expr) {
@@ -70,6 +111,12 @@ Statement *ConditionStatement(Expression *expr, Statement *if_st, Statement *el_
   st->elseSt = el_st;
   return buildStatement(stCONDITION, st, &_condition_stat);
 }
+Statement *WhileStatement(Expression *expr, Statement *wh_st) {
+  StatementWhile *st = (StatementWhile*)malloc(sizeof(StatementWhile));
+  st->expression = expr;
+  st->whileSt = wh_st;
+  return buildStatement(stWHILE, st, &_while_stat);
+}
 Statement *PrintStatement(Expression *expr) {
   StatementCondition *st = (StatementPrint*)malloc(sizeof(StatementPrint));
   st->expression = expr;
@@ -85,6 +132,11 @@ Statement *DeleteStatement(char *name) {
   st->name = name;
   return buildStatement(stDELETE, st, &_delete_stat);
 }
+Statement *BlockStatement() {
+  StatementBlock *st = (StatementBlock*)malloc(sizeof(StatementBlock));
+  st->list = statements_init();
+  return buildStatement(stBLOCK, st, &_block_stat);
+}
 
 static Statement *buildStatement(StatementType st_type, void *st, void *executer) {
   Statement *s = (Statement*)malloc(sizeof(Statement));
@@ -92,4 +144,27 @@ static Statement *buildStatement(StatementType st_type, void *st, void *executer
   s->type = st_type;
   s->execute = executer;
   return s;
+}
+// statements list for block statement
+statement_node_t *statements_init() {
+  statement_node_t *node = (statement_node_t*)malloc(sizeof(statement_node_t));
+	node->value = NULL;
+	node->next = NULL;
+	return node;
+}
+void statements_push(statement_node_t *node, Statement *stat) {
+  statement_node_t *current = node;
+
+  if (current->value == NULL) { // check for first element
+    current->value = stat;
+    return;
+  }
+
+  while (current->next != NULL) {
+      current = current->next;
+  }
+
+  current->next = (statement_node_t*)malloc(sizeof(statement_node_t));
+  current->next->value = stat;
+  current->next->next = NULL;
 }

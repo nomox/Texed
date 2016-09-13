@@ -1,6 +1,5 @@
 #include "stdlib.h"
 #include "stdbool.h"
-#include "variables.h"
 #include "types.h"
 #include "tokens.h"
 #include "expression.h"
@@ -12,8 +11,11 @@ static char value[64];
 static int pos;
 
 static Statement *statement();
+static Statement *block();
+static Statement *statementPreferred();
 static Statement *assignmentStatement();
 static Statement *conditionalStatement();
+static Statement *whileStatement();
 
 static Expression* expression();
 static Expression* conditional();
@@ -28,24 +30,47 @@ int parse() {
 	//printf("%d\n", e->get(e));
 	while (getToken().type != ttEOF) {
 		Statement *s;
-		s = statement(); // тут помилка FIX IT BITCH !
-		if (s == NULL) {
-			writeError(erSTATEMENT, "");
-		}
-		s->execute(s);
+		s = statement();
+		if (s != NULL)
+			s->execute(s);
 		free(s); // чисттимо
-		if (!tokenMatch(ttEOL)) {
+		if (!tokenMatch(ttEOL) && getToken().type != ttEOF) {
 			writeError(erEXPECTATION, "<EOL>");
 		}
-		//tokenMiss(ttEOL);
 	}
 }
 
 //statements
+static Statement *block() {
+	Statement *bloc_st = BlockStatement();
+	StatementBlock *st = bloc_st->statement;
+
+	if (!tokenMatch(ttOPENBLOCK))
+		writeError(erEXPECTATION, "{");
+	while (!tokenMatch(ttCLOSEBLOCK)) {
+		statements_push(st->list, statement());
+		//free(s); // чисттимо
+		if (getToken().type == ttEOF)
+			writeError(erEXPECTATION, "}");
+		if (!tokenMatch(ttEOL) && getToken().type != ttCLOSEBLOCK) {
+			writeError(erEXPECTATION, "<EOL>");
+		}
+	}
+	return bloc_st;
+}
+static Statement *statementPreferred() {
+	if (getToken().type == ttOPENBLOCK)
+		return block();
+	else
+		return statement();
+}
 static Statement *statement() {
-	tokenMiss(ttEOL);
+	tokenSkip(ttEOL);
 	if (tokenMatch(ttIF)) {
 		return conditionalStatement();
+	}
+	if (tokenMatch(ttWHILE)) {
+		return whileStatement();
 	}
 	if (tokenMatch(ttPRINT)) {
 		return PrintStatement(expression());
@@ -68,23 +93,33 @@ static Statement *assignmentStatement() {
 		return AssignStatement(current.value, expression());
 	}
 	else {
+		if (getToken().type == ttEOF)
+			return NULL;
+		//printf("tt %d\n", getToken().type);
 		writeError(erEXPECTATION, "<STATEMENT>");
 	}
 }
 static Statement *conditionalStatement() {
 	Expression *expr = expression();
-	Statement *ifStatement = statement();
+	tokenSkip(ttEOL);
+	Statement *ifStatement = statementPreferred();
 	Statement *elseStatement;
-	tokenMiss(ttEOF);
+	if (getTokenAt(1).type == ttELSE) tokenSkip(ttEOL);
 	if (tokenMatch(ttELSE)) {
-		elseStatement = statement();
+		elseStatement = statementPreferred();
 	}
 	else {
 		elseStatement = NULL;
 	}
 	return ConditionStatement(expr, ifStatement, elseStatement);
 }
-
+static Statement *whileStatement() {
+	Expression *expr = expression();
+	tokenSkip(ttEOL);
+	Statement *whStatement = statementPreferred();
+	return WhileStatement(expr, whStatement);
+}
+// expressions
 static Expression* expression() {
 	return conditional();
 }
@@ -150,10 +185,10 @@ static Expression* operand() { // numbers and strings // високий прио
 	Token current = getToken();
 	//printf("kek %d '%s'\n", current.type, current.value);
 	if (tokenMatch(ttNUMBER)) {
-		return numberExpression((int)strtol(current.value, NULL, 10));
+		return integerExpression((int)strtol(current.value, NULL, 10));
 	}
 	if (tokenMatch(ttHEXNUM)) {
-		return numberExpression((int)strtol(current.value, NULL, 16));
+		return integerExpression((int)strtol(current.value, NULL, 16));
 	}
 	if (tokenMatch(ttSTRING)) {
 		return stringExpression(current.value);

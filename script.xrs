@@ -1,15 +1,9 @@
-a = 4
-v = 4
 k = 88
-x = ((2)+(2+2)*2*((1*3)))*v
+x = k + 1
 //
-print "X = "
-print x
-print "\n"
-if (k < x) print "baris\n"
-else
-  error "ERROR"
-print "добрий вечір\nWARUM ?\n"
-print("sadasdasd ")
-delete k
-print k
+
+while x < 100 {
+    print x
+    print "\n"
+    x = x + 1
+}
