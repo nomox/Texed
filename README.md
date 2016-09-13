@@ -17,4 +17,4 @@ Version history:
 0.2
 -new expression builder
 -while statement
--operator block
+-operators block
