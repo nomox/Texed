@@ -50,6 +50,8 @@ typedef enum TOKENTYPE
 	ttFOR, // for
 	ttWHILE, // while
 	ttDO, // do 40
+	ttBREAK, // break
+	ttCONTINUE, // contunue
 	// reserved words
 	ttFUNCTION, // function
 	ttTHIS, // this
@@ -58,7 +60,7 @@ typedef enum TOKENTYPE
 	ttNIL, // nil
 	ttTRUE, // true
 	ttFALSE, // false
-	ttPRINT, // print
+	ttPRINT, // print 50
 	ttERROR, // error
-	ttDELETE // delete 50
+	ttDELETE // delete
 } TokenType;

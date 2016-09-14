@@ -70,7 +70,9 @@ static const char *WORD_STRINGS[] = {
 	"false",
 	"print",
 	"error",
-	"delete"
+	"delete",
+	"break",
+	"continue"
 };
 static const TokenType WORD_TOKEN[] = {
 	ttIF,
@@ -91,7 +93,9 @@ static const TokenType WORD_TOKEN[] = {
 	ttFALSE,
 	ttPRINT,
 	ttERROR,
-	ttDELETE
+	ttDELETE,
+	ttBREAK,
+	ttCONTINUE
 };
 static bool skip = false;
 static int nline = 0;

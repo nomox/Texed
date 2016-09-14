@@ -1,11 +1,15 @@
 #include "stdlib.h"
 #include "stdbool.h"
+#include "setjmp.h"
 #include "statement.h"
 #include "memory.h"
 #include "expression.h"
 #include "error.h"
 
 static Statement *buildStatement();
+
+static jmp_buf jump_buffer; // 1 - break, 2 - continue
+bool loop_begin = false;
 
 static void _assign_stat(Statement *s) {
   StatementAssign *st = s->statement;
@@ -46,7 +50,12 @@ static void _while_stat(Statement *s) {
     writeError(erEXPECTATION, "<BOOLEAN EXPRESSION>");
   while (eval->value.b) {
     // зациклення UPD: походу тому що очищуєм об'єкти
-    st->whileSt->execute(st->whileSt);
+    int b_val = setjmp(jump_buffer);
+    if (!b_val) {
+      st->whileSt->execute(st->whileSt);
+    }
+    if (b_val == 1) break;
+    //if (b_val == 2) {} // а нам і не тре continue, і так вийде з циклу
     eval = getValueExpression(st->expression); // get new results
   }
   //free(st->expression);
@@ -96,6 +105,12 @@ static void _block_stat(Statement *s) {
   //free(st->list);
   //free(st);
 }
+static void _break_stat(Statement *s) {
+  longjmp(jump_buffer, 1);
+}
+static void _continue_stat(Statement *s) {
+  longjmp(jump_buffer, 2);
+}
 
 Statement *AssignStatement(char *name, Expression *expr) {
   Statement *s = (Statement*)malloc(sizeof(Statement));
@@ -137,7 +152,13 @@ Statement *BlockStatement() {
   st->list = statements_init();
   return buildStatement(stBLOCK, st, &_block_stat);
 }
-
+Statement *BreakStatement() {
+  return buildStatement(stBREAK, NULL, &_break_stat);
+}
+Statement *ContinueStatement() {
+  return buildStatement(stCONTINUE, NULL, &_continue_stat);
+}
+// statement builder
 static Statement *buildStatement(StatementType st_type, void *st, void *executer) {
   Statement *s = (Statement*)malloc(sizeof(Statement));
   s->statement = st;

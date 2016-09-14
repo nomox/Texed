@@ -85,6 +85,12 @@ static Statement *statement() {
 		else
 			writeError(erEXPECTATION, "<Variable>");
 	}
+	if (tokenMatch(ttBREAK)) {
+		return BreakStatement();
+	}
+	if (tokenMatch(ttCONTINUE)) {
+		return ContinueStatement();
+	}
 	return assignmentStatement();
 }
 static Statement *assignmentStatement() {

@@ -9,7 +9,9 @@ typedef enum STATEMENTTYPE {
   stPRINT,
   stERROR,
   stDELETE,
-  stBLOCK
+  stBLOCK,
+  stBREAK,
+  stCONTINUE
 } StatementType;
 
 typedef struct STATEMENT {
@@ -52,6 +54,8 @@ Statement *PrintStatement(Expression*);
 Statement *ErrorStatement(Expression*);
 Statement *DeleteStatement(char*);
 Statement *BlockStatement();
+Statement *BreakStatement();
+Statement *ContinueStatement();
 
 // list
 typedef struct statements_node {

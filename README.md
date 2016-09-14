@@ -1,5 +1,6 @@
 X!! interpreter written on C (C99)
 X-Factorial-Factorial
+https://vk.com/nomox
 
 Version history:
 [Alpha]
@@ -18,3 +19,5 @@ Version history:
 -new expression builder
 -while statement
 -operators block
+0.2.1
+-break, continue for loops
