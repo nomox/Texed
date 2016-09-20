@@ -6,46 +6,51 @@
 
 static int position = 0;
 static int mem_size;
+static Record *current_local = NULL; // parent record for storing
+static Record *local_record;
 
 static int memoryEmptyPosition();
 
 void memoryInit(int size) { // ініціалізація пам'яті !!!
   mem_size = size;
   memory = (Record*)malloc(sizeof(Record) * size);
+
+  Record *local_record = (Record*)malloc(sizeof(Record));
+  local_record->name = malloc(1);
+  local_record->name = "$";
+  local_record->type = dtLINK;
+  memorySet(local_record);
 }
+/*
+get root
+
+*/
 void memorySet(Record *record) {
-  /*
-  if (record->type == dtNUMBER)
-    printf("%d\n", record->data.i);
-  if (record->type == dtSTRING) {
-    printf(record->data.s);
-    printf("\n");
-  }*/
-  /*
-  Record *t_mem;
-  t_mem = realloc(memory, position * sizeof(Record));
-  if (t_mem != NULL) { // якщо вдало сформувалася память
-    memory = t_mem;
-    memory[position++] = *record;
-    //free(t_mem);
-    free(record);
-  }
-  else {
-    writeError(erMEMORYREALLOCATION, ""); // а нє то ашібочка
-  }
-  */
   if (position >= mem_size)
     writeError(erMEMORYREALLOCATION, "");
-  int pos = memoryPosition(record->name);
-  if (pos < 0) // якщо нема то нову пишем
-    memory[memoryEmptyPosition()] = *record; // memoryEmptyPosition() || position++
-  else
+  int pos = memoryPosition(record->name); // перевіряєм чи є така змінна
+  if (pos < 0) { // якщо нема то нову пишем
+    int new_pos = memoryEmptyPosition();
+    memory[new_pos] = *record; // створюэмо нову змінну
+    memory[new_pos].parent = current_local;
+  }
+  else {
+    Record *tmp = memory[pos].parent;
     memory[pos] = *record;
+    memory[pos].parent = tmp;
+  }
   free(record); // destroy
 }
 Record *memoryGet(const char *name) {
   for (int i = 0; i < position; i++) {
-    if (!strcmp(memory[i].name, name)) {
+    if (!strcmp(memory[i].name, name) && current_local == memory[i].parent) {
+      Record *r = (Record*)malloc(sizeof(Record));
+      *r = memory[i];
+      return r;
+    }
+  }
+  for (int i = 0; i < position; i++) {
+    if (!strcmp(memory[i].name, name) && memory[i].parent == NULL) {
       Record *r = (Record*)malloc(sizeof(Record));
       *r = memory[i];
       return r;
@@ -64,7 +69,7 @@ void memoryDelete(const char *name) {
 }
 int memoryPosition(const char *name) {
   for (int i = 0; i < position; i++) {
-    if (!strcmp(memory[i].name, name)) {
+    if (!strcmp(memory[i].name, name) && current_local == memory[i].parent) {
       return i;
     }
   }
@@ -116,5 +121,21 @@ Record *newRecordNil(char *name) {
   record = (Record*)malloc(sizeof(Record));
   record->name = name;
   record->type = dtNIL;
+  return record;
+}
+Record *newRecordFunction(char *name, struct FUNCTION *func) {
+  Record *record;
+  record = (Record*)malloc(sizeof(Record));
+  record->name = name;
+  record->type = dtFUNCTION;
+  record->data.fn = func;
+  return record;
+}
+Record *newRecordValue(char *name, expression_value_t *val) {
+  Record *record;
+  record = (Record*)malloc(sizeof(Record));
+  record->name = name;
+  record->type = (DataType)val->type;
+  record->data = (Data)val->value;
   return record;
 }

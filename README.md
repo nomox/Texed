@@ -9,9 +9,9 @@ Version history:
 0.1.1
 -Parser
 -Expression
--Integer, Real, HEX numbers
+-Integer, Real, HEX numbers, boolean, string
 0.1.2
--Memory for variables
+-Memory
 -Variables
 -Operators: print, error, delete
 -if/else statement
@@ -21,3 +21,7 @@ Version history:
 -operators block
 0.2.1
 -break, continue for loops
+0.3
+-system functions
+-user functions
+-line conditional

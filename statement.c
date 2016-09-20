@@ -1,10 +1,9 @@
 #include "stdlib.h"
 #include "stdbool.h"
-#include "setjmp.h"
-#include "statement.h"
-#include "memory.h"
-#include "expression.h"
 #include "error.h"
+#include "statement.h"
+#include "expression.h"
+#include "memory.h"
 
 static Statement *buildStatement();
 
@@ -67,6 +66,8 @@ static void _print_stat(Statement *s) {
 
   if (eval->type == dtINTEGER) // print number
     printf("%d", eval->value.i);
+  if (eval->type == dtFLOAT) // print number
+    printf("%d", eval->value.f);
   if (eval->type == dtSTRING) // print string
     printf(eval->value.s);
   if (eval->type == dtBOOLEAN) // print boolean
@@ -102,6 +103,7 @@ static void _block_stat(Statement *s) {
     tmp->execute(tmp);
     current = current->next;
   }
+  // TASK: clear list
   //free(st->list);
   //free(st);
 }
@@ -110,6 +112,51 @@ static void _break_stat(Statement *s) {
 }
 static void _continue_stat(Statement *s) {
   longjmp(jump_buffer, 2);
+}
+static void _funcdef_stat(Statement *s) {
+  StatementFuncDef *st = s->statement;
+  createFunction(st->name, st->args, st->func_body);
+  //free(st->expression);
+  //free(st);
+}
+static void _return_stat(Statement *s) {
+  StatementReturn *st = s->statement;
+  if (st->expression != NULL)
+    returned_val = getValueExpression(st->expression);
+  else {
+    returned_val = valueNil();
+  }
+  longjmp(jump_return, 1);
+}
+static void _istrue_stat(Statement *s) {
+  StatementIsTrue *st = s->statement;
+  expression_value_t *eval = getValueExpression(st->expression);
+  if (eval->type != dtBOOLEAN)
+    writeError(erEXPECTATION, "<BOOLEAN EXPRESSION>");
+  bool res = eval->value.b;
+  if (res) {
+    st->statement->execute(st->statement);
+  }
+  //free(st->expression);
+  //free(st);
+}
+static void _isfalse_stat(Statement *s) {
+  StatementIsFalse *st = s->statement;
+  expression_value_t *eval = getValueExpression(st->expression);
+  if (eval->type != dtBOOLEAN)
+    writeError(erEXPECTATION, "<BOOLEAN EXPRESSION>");
+  bool res = eval->value.b;
+  if (!res) {
+    st->statement->execute(st->statement);
+  }
+  //free(st->expression);
+  //free(st);
+}
+static void _default_stat(Statement *s) {
+  StatementDefault *st = s->statement;
+  expression_value_t *eval = getValueExpression(st->expression);
+  //free(st->expression);
+  //free(st);
 }
 
 Statement *AssignStatement(char *name, Expression *expr) {
@@ -158,6 +205,38 @@ Statement *BreakStatement() {
 Statement *ContinueStatement() {
   return buildStatement(stCONTINUE, NULL, &_continue_stat);
 }
+Statement *FuncDefStatement(char *name, char *arg_template, Statement *func_body) {
+  StatementFuncDef *st = (StatementFuncDef*)malloc(sizeof(StatementFuncDef));
+  st->name = malloc(strlen(name));
+  strcpy(st->name, name);
+  st->args = malloc(strlen(arg_template));
+  strcpy(st->args, arg_template);
+  st->func_body = func_body;
+  return buildStatement(stFUNCDEF, st, &_funcdef_stat);
+}
+Statement *ReturnStatement(Expression *expr) {
+  StatementReturn *st = (StatementReturn*)malloc(sizeof(StatementReturn));
+  st->expression = expr;
+  return buildStatement(stRETURN, st, &_return_stat);
+}
+Statement *IfTrueStatement(Expression *expr, Statement *stat) {
+  StatementIsTrue *st = (StatementIsTrue*)malloc(sizeof(StatementIsTrue));
+  st->expression = expr;
+  st->statement = stat;
+  return buildStatement(stISTRUE, st, &_istrue_stat);
+}
+Statement *IfFalseStatement(Expression *expr, Statement *stat) {
+  StatementIsFalse *st = (StatementIsFalse*)malloc(sizeof(StatementIsFalse));
+  st->expression = expr;
+  st->statement = stat;
+  return buildStatement(stISFALSE, st, &_isfalse_stat);
+}
+Statement *DefaultStatement(Expression *expr) {
+  StatementDefault *st = (StatementDefault*)malloc(sizeof(StatementDefault));
+  st->expression = expr;
+  return buildStatement(stDEFAULT, st, &_default_stat);
+}
+
 // statement builder
 static Statement *buildStatement(StatementType st_type, void *st, void *executer) {
   Statement *s = (Statement*)malloc(sizeof(Statement));

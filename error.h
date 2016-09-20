@@ -9,7 +9,10 @@ typedef enum ERRORTYPE {
 	erSYNTAX,
 	erZERODIVISION,
 	erEXPECTATION,
-	erUNKNOWNLEXEM
+	erUNKNOWNLEXEM,
+	erUNKNOWNFUNC,
+	erFUNCNOTINIT,
+	erARGMISMATCH
 } ErrorType;
 
 int write_errors;

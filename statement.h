@@ -1,6 +1,8 @@
-#pragma once
+#ifndef STATEMENT_H
+#define STATEMENT_H
 
 #include "expression.h"
+#include "setjmp.h"
 
 typedef enum STATEMENTTYPE {
   stASSIGN,
@@ -11,7 +13,12 @@ typedef enum STATEMENTTYPE {
   stDELETE,
   stBLOCK,
   stBREAK,
-  stCONTINUE
+  stCONTINUE,
+  stFUNCDEF,
+  stRETURN,
+  stISTRUE,
+  stISFALSE,
+  stDEFAULT
 } StatementType;
 
 typedef struct STATEMENT {
@@ -46,6 +53,25 @@ typedef struct STATEMENT_DELETE {
 typedef struct STATEMENT_BLOCK {
   struct statement_node *list;
 } StatementBlock;
+typedef struct STATEMENT_FUNCDEF {
+  char *name;
+  char *args;
+  Statement *func_body;
+} StatementFuncDef;
+typedef struct STATEMENT_RETURN {
+  Expression *expression;
+} StatementReturn;
+typedef struct STATEMENT_ISTRUE {
+  Expression *expression;
+  Statement *statement;
+} StatementIsTrue;
+typedef struct STATEMENT_ISFALSE {
+  Expression *expression;
+  Statement *statement;
+} StatementIsFalse;
+typedef struct STATEMENT_DEFAULT {
+  Expression *expression;
+} StatementDefault;
 
 Statement *AssignStatement(char*, Expression*);
 Statement *ConditionStatement(Expression*, Statement*, Statement*);
@@ -56,6 +82,15 @@ Statement *DeleteStatement(char*);
 Statement *BlockStatement();
 Statement *BreakStatement();
 Statement *ContinueStatement();
+Statement *FuncDefStatement(char*, char*, Statement*);
+Statement *ReturnStatement(Expression*);
+Statement *IfTrueStatement(Expression*, Statement*);
+Statement *IfFalseStatement(Expression*, Statement*);
+Statement *DefaultStatement(Expression*);
+
+// return utils
+jmp_buf jump_return;
+expression_value_t *returned_val;
 
 // list
 typedef struct statements_node {
@@ -65,3 +100,5 @@ typedef struct statements_node {
 
 statement_node_t *statements_init();
 void statements_push(statement_node_t*, Statement*);
+
+#endif STATEMENT_H

@@ -1,13 +1,14 @@
+pi = 3.14
+__print(pi, "\n", "plez", "\n")
 k = 88
 x = k + 1
 
-while x < 100 {
-    x = x + 1
-    if x = 93 continue
-    print x
+fn sum(vals) {
+    print "hello "
+    print vals
     print "\n"
+    return 5+5
 }
-
-a = x > 0
-if a
-    print "ololol\nXD"
+n = sum(10)
+a = true
+a ? __print(nil)

@@ -18,7 +18,7 @@ typedef enum TOKENTYPE
 	ttCOMMA, // , 10
 	ttGHOST, // #
 	ttASSIGN, // =
-	ttEXDENT, // :
+	ttEXTEND, // :
 	ttOPENBLOCK, // {
 	ttCLOSEBLOCK, // }
 	ttPOPEN, // (
@@ -54,13 +54,15 @@ typedef enum TOKENTYPE
 	ttCONTINUE, // contunue
 	// reserved words
 	ttFUNCTION, // function
+	ttFNDEF, // fn
+	ttRETURN, // return
 	ttTHIS, // this
 	ttSELF, // self
 	ttUSE, // use
 	ttNIL, // nil
-	ttTRUE, // true
+	ttTRUE, // true 50
 	ttFALSE, // false
-	ttPRINT, // print 50
+	ttPRINT, // print
 	ttERROR, // error
 	ttDELETE // delete
 } TokenType;

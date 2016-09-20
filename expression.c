@@ -1,18 +1,13 @@
 #include "stdlib.h"
 #include "stdbool.h"
 #include "string.h"
-#include "memory.h"
-#include "expression.h"
-#include "tokens.h"
 #include "error.h"
+#include "expression.h"
+#include "statement.h"
+#include "memory.h"
+#include "function.h"
 
 static Expression *buildExpression(void *expr, void *executer); // build expression
-
-static expression_value_t *valueInteger(int);
-static expression_value_t *valueFloat(float);
-static expression_value_t *valueBoolean(bool);
-static expression_value_t *valueString(char*);
-static expression_value_t *valueNil();
 
 static expression_value_t *_get_int(Expression *e) {
   ExpressionInteger *ex = e->expression;
@@ -93,6 +88,19 @@ static expression_value_t *_get_conditional(Expression *e) {
       return valueBoolean(eval1->value.i < eval2->value.i);
   }
 }
+static expression_value_t *_get_function(Expression *e) {
+  ExpressionFunction *ex = e->expression;
+  int arg_len = expression_length(ex->args);
+  expression_value_t **args = malloc(arg_len); // create args array
+  Expression *tmp;
+  expression_node_t *current;
+  int i;
+  for (i = 0, current = ex->args; current != NULL; i++, current = current->next) {
+    tmp = current->value;
+    args[i] = tmp->get(tmp);
+  }
+  return callFunction(ex->name, args, arg_len);
+}
 
 // вирази для пацанів
 // variable expression
@@ -108,7 +116,7 @@ Expression* integerExpression(int number) {
   e->number = number;
   return buildExpression(e, &_get_int);
 }
-Expression* floatExpression(float number) {
+Expression* floatExpression(double number) {
   ExpressionFloat *e = (ExpressionFloat*)malloc(sizeof(ExpressionFloat));
   e->number = number;
   return buildExpression(e, &_get_float);
@@ -150,6 +158,13 @@ Expression* conditionalExpression(Operation operation, Expression *expr1, Expres
   e->expr2 = expr2;
   return buildExpression(e, &_get_conditional);
 }
+Expression* functionExpression(char *name, expression_node_t *args) {
+  ExpressionFunction *e = (ExpressionFunction*)malloc(sizeof(ExpressionFunction));
+  e->name = malloc(strlen(name));
+  strcpy(e->name, name);
+  e->args = args;
+  return buildExpression(e, &_get_function);
+}
 
 // builder
 static Expression *buildExpression(void *expr, void *executer) {
@@ -160,32 +175,32 @@ static Expression *buildExpression(void *expr, void *executer) {
 }
 
 // tools
-static expression_value_t *valueInteger(int number) {
+expression_value_t *valueInteger(int number) {
   expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
   ev->type = dtINTEGER;
   ev->value.i = number;
   return ev;
 }
-static expression_value_t *valueFloat(float number) {
+expression_value_t *valueFloat(float number) {
   expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
   ev->type = dtFLOAT;
   ev->value.f = number;
   return ev;
 }
-static expression_value_t *valueBoolean(bool boolean) {
+expression_value_t *valueBoolean(bool boolean) {
   expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
   ev->type = dtBOOLEAN;
   ev->value.b = boolean;
   return ev;
 }
-static expression_value_t *valueString(char *string) {
+expression_value_t *valueString(char *string) {
   expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
   ev->type = dtSTRING;
   ev->value.s = malloc(strlen(string));
   strcpy(ev->value.s, string);
   return ev;
 }
-static expression_value_t *valueNil() {
+expression_value_t *valueNil() {
   expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
   ev->type = dtNIL;
   return ev;
@@ -194,6 +209,33 @@ expression_value_t *getValueExpression(Expression *e) {
   return e->get(e);
 }
 
-int getAsInteger(Expression *e) {
+// tools
+expression_node_t *expression_init() {
+  expression_node_t *node = (expression_node_t*)malloc(sizeof(expression_node_t));
+	node->value = NULL;
+	node->next = NULL;
+	return node;
+}
+void expression_push(expression_node_t *node, Expression *expr){
+  statement_node_t *current = node;
 
+  if (current->value == NULL) { // check for first element
+    current->value = expr;
+    return;
+  }
+
+  while (current->next != NULL) {
+      current = current->next;
+  }
+
+  current->next = (expression_node_t*)malloc(sizeof(expression_node_t));
+  current->next->value = expr;
+  current->next->next = NULL;
+}
+int expression_length(expression_node_t *list) {
+  int length = 0;
+  expression_node_t *current;
+  for (current = list; current != NULL; current = current->next)
+    length++;
+  return length;
 }

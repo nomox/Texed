@@ -31,7 +31,7 @@ static const TokenType OPERATION_TOKEN[] = {
 	ttMINUS,
 	ttMULTIPLY,
 	ttDIVIDE,
-	ttEXDENT,
+	ttEXTEND,
 	ttDOT,
 	ttCOMMA,
 	ttPOPEN,
@@ -62,6 +62,7 @@ static const char *WORD_STRINGS[] = {
 	"while",
 	"do",
 	"function",
+	"fn",
 	"this",
 	"self",
 	"use",
@@ -72,7 +73,8 @@ static const char *WORD_STRINGS[] = {
 	"error",
 	"delete",
 	"break",
-	"continue"
+	"continue",
+	"return"
 };
 static const TokenType WORD_TOKEN[] = {
 	ttIF,
@@ -85,6 +87,7 @@ static const TokenType WORD_TOKEN[] = {
 	ttWHILE,
 	ttDO,
 	ttFUNCTION,
+	ttFNDEF,
 	ttTHIS,
 	ttSELF,
 	ttUSE,
@@ -95,7 +98,8 @@ static const TokenType WORD_TOKEN[] = {
 	ttERROR,
 	ttDELETE,
 	ttBREAK,
-	ttCONTINUE
+	ttCONTINUE,
+	ttRETURN
 };
 static bool skip = false;
 static int nline = 0;

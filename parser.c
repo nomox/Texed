@@ -1,10 +1,10 @@
 #include "stdlib.h"
 #include "stdbool.h"
+#include "error.h"
 #include "types.h"
 #include "tokens.h"
 #include "expression.h"
 #include "statement.h"
-#include "error.h"
 
 static TokenType t;
 static char value[64];
@@ -16,6 +16,8 @@ static Statement *statementPreferred();
 static Statement *assignmentStatement();
 static Statement *conditionalStatement();
 static Statement *whileStatement();
+static Statement *funcDefine();
+static Statement *defaultStatement();
 
 static Expression* expression();
 static Expression* conditional();
@@ -23,11 +25,9 @@ static Expression* addition();
 static Expression* multiply();
 static Expression* unary();
 static Expression* operand();
+static Expression* function();
 
 int parse() {
-	//Expression *e;
-	//e = expression();
-	//printf("%d\n", e->get(e));
 	while (getToken().type != ttEOF) {
 		Statement *s;
 		s = statement();
@@ -64,6 +64,27 @@ static Statement *statementPreferred() {
 	else
 		return statement();
 }
+static Expression *function() { // fucntion expression
+	Token current = getToken();
+	tokenMatch(ttVARIABLE);
+	tokenMatch(ttPOPEN);
+	expression_node_t *args = expression_init();
+	int counter = 0;
+	while (!tokenMatch(ttPCLOSE)) {
+		expression_push(args, expression());
+		if (tokenMatch(ttCOMMA)) { // (6,) and match token comma
+			if (getToken().type == ttPCLOSE) // то не змінна то вираз
+				writeError(erEXPECTATION, "<EXPRESSION> (argument)");
+		}
+		counter++;
+	}
+	if (counter > 0)
+		return functionExpression(current.value, args);
+	else {
+		free(args);
+		return functionExpression(current.value, NULL);
+	}
+}
 static Statement *statement() {
 	tokenSkip(ttEOL);
 	if (tokenMatch(ttIF)) {
@@ -71,6 +92,9 @@ static Statement *statement() {
 	}
 	if (tokenMatch(ttWHILE)) {
 		return whileStatement();
+	}
+	if (tokenMatch(ttFNDEF)) {
+		return funcDefine();
 	}
 	if (tokenMatch(ttPRINT)) {
 		return PrintStatement(expression());
@@ -91,19 +115,38 @@ static Statement *statement() {
 	if (tokenMatch(ttCONTINUE)) {
 		return ContinueStatement();
 	}
+	if (tokenMatch(ttRETURN)) {
+		if (getToken().type != ttEOL)
+			return ReturnStatement(expression());
+		else
+			return ReturnStatement(NULL);
+	}
 	return assignmentStatement();
 }
 static Statement *assignmentStatement() {
 	Token current = getToken();
-	if (tokenMatch(ttVARIABLE) && tokenMatch(ttASSIGN)) {
+	if ((getTokenAt(0).type == ttVARIABLE && getTokenAt(1).type == ttASSIGN)) {
+		tokenMatch(ttVARIABLE);
+		tokenMatch(ttASSIGN);
 		return AssignStatement(current.value, expression());
 	}
-	else {
-		if (getToken().type == ttEOF)
-			return NULL;
-		//printf("tt %d\n", getToken().type);
-		writeError(erEXPECTATION, "<STATEMENT>");
+	return defaultStatement();
+}
+static Statement *defaultStatement() {
+	Expression *expr = expression();
+	if (tokenMatch(ttISTRUE)) {
+		return IfTrueStatement(expr, statementPreferred());
 	}
+	if (tokenMatch(ttNOT)) {
+		return IfFalseStatement(expr, statementPreferred());
+	}
+	return DefaultStatement(expr);
+	/*
+	else {
+		if (getToken().type == ttEOF) // якщо кінцеь файлу нічого не вертаєм
+			return NULL;
+		writeError(erEXPECTATION, "<STATEMENT>");
+	}*/
 }
 static Statement *conditionalStatement() {
 	Expression *expr = expression();
@@ -124,6 +167,33 @@ static Statement *whileStatement() {
 	tokenSkip(ttEOL);
 	Statement *whStatement = statementPreferred();
 	return WhileStatement(expr, whStatement);
+}
+static Statement *funcDefine() {
+	Token current = getToken();
+	tokenMatch(ttVARIABLE);
+	tokenMatch(ttPOPEN);
+	char args[128] = "";
+	while (!tokenMatch(ttPCLOSE)) {
+		Token var = getToken();
+		if (tokenMatch(ttVARIABLE)) {
+			strcat(args, var.value);
+		}
+		else {
+			writeError(erEXPECTATION, "<Variable>");
+		}
+		if (tokenMatch(ttCOMMA)) { // (6,) and match token comma
+			strcat(args, ";");
+			if (getToken().type == ttPCLOSE) // то не змінна то вираз
+				writeError(erEXPECTATION, "<EXPRESSION> (argument)");
+		}
+	}
+	if (getToken().type == ttOPENBLOCK) {
+		Statement *st = statementPreferred();
+		return FuncDefStatement(current.value, args, st);
+	}
+	else {
+		return FuncDefStatement(current.value, args, NULL);
+	}
 }
 // expressions
 static Expression* expression() {
@@ -196,6 +266,9 @@ static Expression* operand() { // numbers and strings // високий прио
 	if (tokenMatch(ttHEXNUM)) {
 		return integerExpression((int)strtol(current.value, NULL, 16));
 	}
+	if (tokenMatch(ttFLOATNUM)) {
+		return floatExpression(atof(current.value));
+	}
 	if (tokenMatch(ttSTRING)) {
 		return stringExpression(current.value);
 	}
@@ -207,6 +280,9 @@ static Expression* operand() { // numbers and strings // високий прио
 	}
 	if (tokenMatch(ttNIL)) {
 		return nilExpression();
+	}
+	if (getTokenAt(0).type == ttVARIABLE && getTokenAt(1).type == ttPOPEN) {
+		return function();
 	}
 	if (tokenMatch(ttVARIABLE)) {
 		return variableExpression(current.value);

@@ -5,7 +5,7 @@ write_errors = 0;
 void writeError(ErrorType et, char *msg) {
 	if (write_errors)
 		switch (et) {
-		case erVARNOTEXIST: printf("\nError: Variable \"%s\" not defined (at line %d)", msg, getLine());
+		case erVARNOTEXIST: printf("\nError: \"%s\" not defined (at line %d)", msg, getLine());
 			break;
 		case erMEMORYREALLOCATION: printf("\n~Error: memory reallocation");
 			break;
@@ -17,10 +17,16 @@ void writeError(ErrorType et, char *msg) {
 				break;
 		case erUNKNOWNLEXEM: printf("\nError: Unknown lexem '%s' (at line %d)", msg, getLine());
 				break;
+		case erUNKNOWNFUNC: printf("\nError: '%s' not a function (at line %d)", msg, getLine());
+				break;
+		case erFUNCNOTINIT: printf("\nError: function '%s' not initialized (at line %d)", msg, getLine());
+				break;
+		case erARGMISMATCH: printf("\nError: arguments mismatch for function '%s' (at line %d)", msg, getLine());
+				break;
 		case erOUTOFMEMORY: printf("\nError: Out of memory");
 				break;
 		case erNULL:
-		default: printf("\nError: ~%s", msg);
+		default: printf("\nError: %s", msg);
 			break;
 		}
 	exit(0);
