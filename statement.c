@@ -72,7 +72,7 @@ static void _print_stat(Statement *s) {
     printf(eval->value.s);
   if (eval->type == dtBOOLEAN) // print boolean
     printf((eval->value.b)?"true":"false");
-  if (eval->type == dtNIL || eval->type == dtDELETED) // print nil
+  if (eval->type == dtNIL) // print nil
     printf("nil");
   //free(st->expression); // звільняєм память щоб нас не сварили
   //free(st);
@@ -100,6 +100,8 @@ static void _block_stat(Statement *s) {
   Statement *tmp;
   while (current != NULL) {
     tmp = current->value;
+    if (tmp == NULL)
+      break;
     tmp->execute(tmp);
     current = current->next;
   }
@@ -158,7 +160,25 @@ static void _default_stat(Statement *s) {
   //free(st->expression);
   //free(st);
 }
+static void _table_stat(Statement *s) {
+  StatementTable *st = s->statement;
+  Record *rec = newRecordTable(st->name, mem_list_init());
+  memorySet(rec);
+  //handler_push(mem_stack, current_handler);
+  memory_node_t *tmp = current_handler;
+  current_handler = (rec->data.table);
+  memorySet(newRecordTable("_parent", tmp));
+}
+static void _closetable_stat(Statement *s) {
+  Record *rec = memoryGet("_parent");
+  current_handler = rec->data.table;
+  //current_handler = handler_pop(mem_stack);
+  /*
+  if (current_handler == NULL)
+    writeError(erNULL, "no block expected");*/
+}
 
+// statement decl
 Statement *AssignStatement(char *name, Expression *expr) {
   Statement *s = (Statement*)malloc(sizeof(Statement));
   StatementAssign *st = (StatementAssign*)malloc(sizeof(StatementAssign));
@@ -236,6 +256,15 @@ Statement *DefaultStatement(Expression *expr) {
   st->expression = expr;
   return buildStatement(stDEFAULT, st, &_default_stat);
 }
+Statement *TableStatement(char *name) {
+  StatementTable *st = (StatementTable*)malloc(sizeof(StatementTable));
+  st->name = malloc(strlen(name));
+  strcpy(st->name, name);
+  return buildStatement(stTABLE, st, &_table_stat);
+}
+Statement *CloseTableStatement() {
+  return buildStatement(stCLOSETABLE, NULL, &_closetable_stat);
+}
 
 // statement builder
 static Statement *buildStatement(StatementType st_type, void *st, void *executer) {
@@ -254,16 +283,13 @@ statement_node_t *statements_init() {
 }
 void statements_push(statement_node_t *node, Statement *stat) {
   statement_node_t *current = node;
-
   if (current->value == NULL) { // check for first element
     current->value = stat;
     return;
   }
-
   while (current->next != NULL) {
       current = current->next;
   }
-
   current->next = (statement_node_t*)malloc(sizeof(statement_node_t));
   current->next->value = stat;
   current->next->next = NULL;

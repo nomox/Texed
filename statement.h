@@ -18,7 +18,9 @@ typedef enum STATEMENTTYPE {
   stRETURN,
   stISTRUE,
   stISFALSE,
-  stDEFAULT
+  stDEFAULT,
+  stTABLE,
+  stCLOSETABLE
 } StatementType;
 
 typedef struct STATEMENT {
@@ -72,6 +74,9 @@ typedef struct STATEMENT_ISFALSE {
 typedef struct STATEMENT_DEFAULT {
   Expression *expression;
 } StatementDefault;
+typedef struct STATEMENT_TABLE {
+  char *name;
+} StatementTable;
 
 Statement *AssignStatement(char*, Expression*);
 Statement *ConditionStatement(Expression*, Statement*, Statement*);
@@ -87,6 +92,8 @@ Statement *ReturnStatement(Expression*);
 Statement *IfTrueStatement(Expression*, Statement*);
 Statement *IfFalseStatement(Expression*, Statement*);
 Statement *DefaultStatement(Expression*);
+Statement *TableStatement(char*);
+Statement *CloseTableStatement();
 
 // return utils
 jmp_buf jump_return;

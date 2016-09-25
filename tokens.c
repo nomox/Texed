@@ -35,11 +35,6 @@ int addToken(TokenType type, const char *value) {
 	return count_position++;
 }
 static TokenType getType() {
-	/*
-	if (current_position >= count_position) {
-		printf("Out of size %d\n", count_position);
-		exit(0);
-	}*/
 	return getToken().type;
 }
 Token getTokenAt(int offset) {
@@ -51,15 +46,12 @@ Token getTokenAt(int offset) {
 	eof.value = NULL;
 	return eof;
 }
+Token getTokenWithout(int offset, TokenType type) {
+	int i;
+	for (i = offset; getTokenAt(i).type == type;i++); // лічильник
+	return getTokenAt(i);
+}
 Token getToken() {
-	/*
-	if (current_position < count_position) {
-		return tokens[current_position];
-	}
-	Token eof;
-	eof.type = ttEOF;
-	eof.value = NULL;
-	return eof;*/
 	return getTokenAt(0);
 }
 Token getNextToken() {
@@ -72,7 +64,6 @@ Token getNextToken() {
 	return eof;
 }
 bool tokenMatch(TokenType type) {
-	//while (getType() == ttEOL) current_position++; // skip
 	if (type != getType())
 		return false;
 	current_position++;

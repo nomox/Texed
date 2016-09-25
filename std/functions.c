@@ -16,7 +16,6 @@ expression_value_t *_print(expression_value_t *args[], int arg_length) {
 		    printf((args[i]->value.b)?"true":"false");
 				break;
 		  case dtNIL:
-			case dtDELETED:
 		    printf("nil");
 				break;
 		}

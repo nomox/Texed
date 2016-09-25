@@ -6,82 +6,131 @@
 
 static int position = 0;
 static int mem_size;
+/*
 static Record *current_local = NULL; // parent record for storing
-static Record *local_record;
+static Record *local_record;*/
 
-static int memoryEmptyPosition();
+static memory_node_t *getNodeByName(memory_node_t*, char*);
+static void mem_list_push(memory_node_t*, Record*);
 
 void memoryInit(int size) { // ініціалізація пам'яті !!!
-  mem_size = size;
-  memory = (Record*)malloc(sizeof(Record) * size);
-
-  Record *local_record = (Record*)malloc(sizeof(Record));
-  local_record->name = malloc(1);
-  local_record->name = "$";
-  local_record->type = dtLINK;
-  memorySet(local_record);
+  // init list
+  memory_handler = mem_list_init();
+  mem_list_push(memory_handler, newRecordNil("$"));
+  current_handler = memory_handler;
 }
-/*
-get root
-
-*/
 void memorySet(Record *record) {
-  if (position >= mem_size)
-    writeError(erMEMORYREALLOCATION, "");
-  int pos = memoryPosition(record->name); // перевіряєм чи є така змінна
-  if (pos < 0) { // якщо нема то нову пишем
-    int new_pos = memoryEmptyPosition();
-    memory[new_pos] = *record; // створюэмо нову змінну
-    memory[new_pos].parent = current_local;
+  memory_node_t *node = getNodeByName(current_handler, record->name);
+  if (node != NULL) {
+    node->record = record; // mb need to clear record and assign it again
   }
   else {
-    Record *tmp = memory[pos].parent;
-    memory[pos] = *record;
-    memory[pos].parent = tmp;
+    mem_list_push(current_handler, record);
   }
-  free(record); // destroy
+  //free(record);
 }
 Record *memoryGet(const char *name) {
-  for (int i = 0; i < position; i++) {
-    if (!strcmp(memory[i].name, name) && current_local == memory[i].parent) {
-      Record *r = (Record*)malloc(sizeof(Record));
-      *r = memory[i];
-      return r;
-    }
+  memory_node_t *node = getNodeByName(current_handler, name);
+  if (node != NULL) {
+    return node->record;
   }
-  for (int i = 0; i < position; i++) {
-    if (!strcmp(memory[i].name, name) && memory[i].parent == NULL) {
-      Record *r = (Record*)malloc(sizeof(Record));
-      *r = memory[i];
-      return r;
-    }
-  }
-  writeError(erVARNOTEXIST, name);
+  else
+    writeError(erVARNOTEXIST, name);
 }
 void memoryDelete(const char *name) {
-  for (int i = 0; i < position; i++) {
-    if (!strcmp(memory[i].name, name)) {
-      memory[i].type = dtDELETED;
-      return;
+  memory_node_t *current = current_handler;
+  bool exist = false;
+  Record *r;
+  Record *r_del;
+  while (current != NULL) {
+    if (current->next != NULL)
+    r = current->next->record;
+    if (current != NULL && !strcmp(r->name, name)) { // !можливо потрібно перевірити екземпляр Record
+      exist = true;
+      r_del = current->next;
+      if (current->next->next != NULL)
+        current->next = current->next->next;
+      else
+        current->next = NULL;
+      break;
     }
+    current = current->next; // next node
   }
-  writeError(erVARNOTEXIST, name);
+  if (!exist)
+    writeError(erVARNOTEXIST, name);
+  free(r_del);
 }
-int memoryPosition(const char *name) {
-  for (int i = 0; i < position; i++) {
-    if (!strcmp(memory[i].name, name) && current_local == memory[i].parent) {
-      return i;
+
+static memory_node_t *getNodeByName(memory_node_t *node, char *name) {
+  memory_node_t *current = node;
+  Record *r;
+  while (current != NULL) {
+    r = current->record;
+    if (r != NULL && !strcmp(r->name, name)) { // !можливо потрібно перевірити екземпляр Record
+      return current;
     }
+    current = current->next; // next node
   }
-  return -1;
+  return NULL; // якщо нічого не найдено
 }
-static int memoryEmptyPosition() {
-  for (int i = 0; i < position; i++) {
-    if (memory[i].type == dtDELETED) {
-      return i;
-    }
+
+// for linked list
+memory_node_t *mem_list_init() {
+  memory_node_t *node = (memory_node_t*)malloc(sizeof(memory_node_t));
+	node->record = NULL;
+	node->next = NULL;
+	return node;
+}
+static void mem_list_push(memory_node_t *node, Record *rec) {
+  memory_node_t *current = node;
+  if (current->record == NULL) { // check for first element
+    current->record = rec;
+    return;
   }
-  return position++;
+  while (current->next != NULL) {
+      current = current->next;
+  }
+  current->next = (memory_node_t*)malloc(sizeof(memory_node_t));
+  current->next->record = rec;
+  current->next->next = NULL;
+}
+// mem stack
+handler_node_t *handler_list_init() {
+  handler_node_t *node = (handler_node_t*)malloc(sizeof(handler_node_t));
+	node->handler = NULL;
+	node->next = NULL;
+	return node;
+}
+void handler_push(handler_node_t *node, memory_node_t *mem) {
+  handler_node_t *current = node;
+  if (current->handler == NULL) { // check for first element
+    current->handler = mem;
+    return;
+  }
+  while (current->next != NULL) {
+      current = current->next;
+  }
+  current->next = (handler_node_t*)malloc(sizeof(handler_node_t));
+  current->next->handler = mem;
+  current->next->next = NULL;
+}
+memory_node_t *handler_get_last(handler_node_t *node) {
+  handler_node_t *current = node;
+  while (current->next != NULL)
+    current = current->next;
+  return current->handler;
+}
+memory_node_t *handler_pop(handler_node_t *node) {
+  handler_node_t *current = node;
+  printf("HELLO\n");
+  if (current->next == NULL)
+    return current->handler;
+  printf("PSHEL VON\n");
+  while (current->next->next != NULL)
+    current = current->next;
+  free(current->next);
+  current->next = NULL;
+  return current->handler;
 }
 // tools
 Record *newRecordInteger(char *name, int number) {
@@ -129,6 +178,14 @@ Record *newRecordFunction(char *name, struct FUNCTION *func) {
   record->name = name;
   record->type = dtFUNCTION;
   record->data.fn = func;
+  return record;
+}
+Record *newRecordTable(char *name, memory_node_t *table) {
+  Record *record;
+  record = (Record*)malloc(sizeof(Record));
+  record->name = name;
+  record->type = dtTABLE;
+  record->data.table = table;
   return record;
 }
 Record *newRecordValue(char *name, expression_value_t *val) {

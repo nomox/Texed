@@ -9,7 +9,7 @@ void writeError(ErrorType et, char *msg) {
 			break;
 		case erMEMORYREALLOCATION: printf("\n~Error: memory reallocation");
 			break;
-		case erSYNTAX: printf("\nError: Lexer: Syntax");
+		case erSYNTAX: printf("\nError: Syntax");
 			break;
 		case erZERODIVISION: printf("\nError: Zero division (at line %d)", getLine());
 				break;

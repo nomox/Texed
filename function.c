@@ -35,7 +35,7 @@ struct expression_value *callFunction(char *name, struct expression_value *args[
       int c_arg = 0;
       char *tok = strtok(fn->arg_template, ";"); // name of function argument
       while (tok != NULL) {
-        memorySet(newRecordValue(tok, *(args+c_arg))); // addres of elemnt
+        memorySet(newRecordValue(tok, *(args+c_arg))); // address of elemnt
         c_arg++;
         tok = strtok(NULL, ";");
       }

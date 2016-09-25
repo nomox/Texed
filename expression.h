@@ -60,6 +60,10 @@ typedef struct EXPRESSION_FUNCTION {
   char *name;
   expression_node_t *args;
 } ExpressionFunction;
+typedef struct EXPRESSION_SUFFIX {
+  Expression *expr1;
+  Expression *expr2;
+} ExpressionSuffix;
 
 Expression* variableExpression(char*);
 Expression* integerExpression(int);
@@ -71,15 +75,19 @@ Expression* unaryExpression(Operation, Expression*);
 Expression* binaryExpression(Operation, Expression*, Expression*);
 Expression* conditionalExpression(Operation, Expression*, Expression*);
 Expression* functionExpression(char*, expression_node_t*);
+Expression* suffixExpression(Expression*, Expression*);
+
 expression_value_t *valueInteger(int);
 expression_value_t *valueFloat(float);
 expression_value_t *valueBoolean(bool);
 expression_value_t *valueString(char*);
 expression_value_t *valueNil();
+expression_value_t *valueTable(memory_node_t*);
 expression_value_t *getValueExpression(Expression*);
 
-// list
+void storeCurrentHandler();
 
+// list
 expression_node_t *expression_init();
 void expression_push(expression_node_t*, Expression*);
 int expression_length(expression_node_t*);

@@ -4,13 +4,13 @@
 #include "stdbool.h"
 
 typedef enum DATA_TYPE {
-  dtDELETED,
+  dtTABLE,
+  dtLINK,
   dtNIL,
   dtINTEGER,
   dtFLOAT,
   dtSTRING,
   dtBOOLEAN,
-  dtLINK,
   dtFUNCTION
 } DataType;
 typedef union DATA {
@@ -20,6 +20,7 @@ typedef union DATA {
   bool b; // boolean
   struct FUNCTION *fn;
   struct RECORD *link;
+  struct memory_node *table;
 } Data;
 
 typedef struct expression_value {
@@ -33,8 +34,26 @@ typedef struct RECORD {
   struct RECORD *parent;
   char *name;
 } Record;
+// memory header
+typedef struct memory_node {
+  Record *record;
+  struct memory_node *next;
+} memory_node_t;
+// stack list node
+typedef struct handler_node {
+  memory_node_t *handler;
+  struct handler_node *next;
+} handler_node_t;
 
-Record *memory; // dynamic memory
+handler_node_t *handler_list_init();
+void handler_push(handler_node_t*, memory_node_t*);
+memory_node_t *handler_get_last(handler_node_t*);
+memory_node_t *handler_pop(handler_node_t*);
+
+memory_node_t *memory_handler; // root handler
+memory_node_t *current_handler;
+memory_node_t *restore_handler;
+//handler_node_t *mem_stack;
 
 void memoryInit(int);
 void memorySet(Record*);
@@ -42,12 +61,15 @@ Record *memoryGet(const char*);
 void memoryDelete(const char*);
 int memoryPosition(const char*);
 
+memory_node_t *mem_list_init();
+
 Record *newRecordInteger(char*, int);
 Record *newRecordFloat(char*, float);
 Record *newRecordString(char*, char*);
 Record *newRecordBoolean(char*, bool);
 Record *newRecordNil(char*);
 Record *newRecordFunction(char*, struct FUNCTION*);
+Record *newRecordTable(char*, memory_node_t*);
 Record *newRecordValue(char*, expression_value_t*);
 
 #endif MEMORY_H

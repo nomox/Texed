@@ -44,9 +44,24 @@ static expression_value_t *_get_var(Expression *e) { // fix: bool to int
   if (r.type == dtBOOLEAN) {
     return valueBoolean(r.data.b);
   }
-  if (r.type == dtNIL || r.type == dtDELETED) {
+  if (r.type == dtNIL) {
     return valueNil();
   }
+  if (r.type == dtTABLE) {
+    return valueTable(r.data.table);
+  }
+}
+static expression_value_t *_get_suffix(Expression *e) {
+  ExpressionSuffix *ex = e->expression;
+  expression_value_t *table = getValueExpression(ex->expr1);
+  if (table->type != dtTABLE) // constructor
+    writeError(erEXPECTATION, "<TABLE>");
+  current_handler = table->value.table;
+  expression_value_t *res = getValueExpression(ex->expr2);
+  if (restore_handler == NULL)
+    writeError(erNULL, "restore handler is NULL");
+  current_handler = restore_handler;
+  return res;
 }
 // operators
 static expression_value_t *_get_unary(Expression *e) {
@@ -88,6 +103,7 @@ static expression_value_t *_get_conditional(Expression *e) {
       return valueBoolean(eval1->value.i < eval2->value.i);
   }
 }
+// function
 static expression_value_t *_get_function(Expression *e) {
   ExpressionFunction *ex = e->expression;
   int arg_len = expression_length(ex->args);
@@ -165,6 +181,12 @@ Expression* functionExpression(char *name, expression_node_t *args) {
   e->args = args;
   return buildExpression(e, &_get_function);
 }
+Expression* suffixExpression(Expression *expr1, Expression *expr2) {
+  ExpressionSuffix *e = (ExpressionSuffix*)malloc(sizeof(ExpressionSuffix));
+  e->expr1 = expr1;
+  e->expr2 = expr2;
+  return buildExpression(e, &_get_suffix);
+}
 
 // builder
 static Expression *buildExpression(void *expr, void *executer) {
@@ -205,10 +227,18 @@ expression_value_t *valueNil() {
   ev->type = dtNIL;
   return ev;
 }
+expression_value_t *valueTable(memory_node_t *table) {
+  expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
+  ev->type = dtTABLE;
+  ev->value.table = table;
+  return ev;
+}
 expression_value_t *getValueExpression(Expression *e) {
   return e->get(e);
 }
-
+void storeCurrentHandler() {
+  restore_handler = current_handler;
+}
 // tools
 expression_node_t *expression_init() {
   expression_node_t *node = (expression_node_t*)malloc(sizeof(expression_node_t));

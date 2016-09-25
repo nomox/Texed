@@ -13,6 +13,7 @@ int addToken(TokenType type, const char *value);
 Token getNextToken();
 Token getToken();
 Token getTokenAt(int);
+Token getTokenWithout(int, TokenType);
 bool tokenMatch(TokenType);
 void tokenSkip(TokenType);
 int getLine();

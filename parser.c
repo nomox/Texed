@@ -24,19 +24,22 @@ static Expression* conditional();
 static Expression* addition();
 static Expression* multiply();
 static Expression* unary();
+static Expression* suffix();
 static Expression* operand();
 static Expression* function();
 
 int parse() {
+	Statement *s;
 	while (getToken().type != ttEOF) {
-		Statement *s;
+		//tokenSkip(ttEOL);
 		s = statement();
 		if (s != NULL)
 			s->execute(s);
-		free(s); // чисттимо
+		//free(s); // чисттимо
 		if (!tokenMatch(ttEOL) && getToken().type != ttEOF) {
 			writeError(erEXPECTATION, "<EOL>");
 		}
+		tokenSkip(ttEOL); // skip EOLs
 	}
 }
 
@@ -44,7 +47,7 @@ int parse() {
 static Statement *block() {
 	Statement *bloc_st = BlockStatement();
 	StatementBlock *st = bloc_st->statement;
-
+	tokenSkip(ttEOL); // func() \n {}
 	if (!tokenMatch(ttOPENBLOCK))
 		writeError(erEXPECTATION, "{");
 	while (!tokenMatch(ttCLOSEBLOCK)) {
@@ -87,6 +90,16 @@ static Expression *function() { // fucntion expression
 }
 static Statement *statement() {
 	tokenSkip(ttEOL);
+	if (getTokenAt(0).type == ttVARIABLE && getTokenWithout(1, ttEOL).type == ttOPENBLOCK) {
+		Token current = getToken();
+		tokenMatch(ttVARIABLE);
+		tokenSkip(ttEOL);
+		tokenMatch(ttOPENBLOCK);
+		return TableStatement(current.value);
+	}
+	if (tokenMatch(ttCLOSEBLOCK)) { // close of table block
+		return CloseTableStatement();
+	}
 	if (tokenMatch(ttIF)) {
 		return conditionalStatement();
 	}
@@ -116,7 +129,7 @@ static Statement *statement() {
 		return ContinueStatement();
 	}
 	if (tokenMatch(ttRETURN)) {
-		if (getToken().type != ttEOL)
+		if (getToken().type != ttEOL && getToken().type != ttCLOSEBLOCK)
 			return ReturnStatement(expression());
 		else
 			return ReturnStatement(NULL);
@@ -187,12 +200,12 @@ static Statement *funcDefine() {
 				writeError(erEXPECTATION, "<EXPRESSION> (argument)");
 		}
 	}
-	if (getToken().type == ttOPENBLOCK) {
-		Statement *st = statementPreferred();
+	if (getTokenWithout(0, ttEOL).type == ttOPENBLOCK) {
+		Statement *st = block();
 		return FuncDefStatement(current.value, args, st);
 	}
 	else {
-		return FuncDefStatement(current.value, args, NULL);
+		return FuncDefStatement(current.value, args, NULL); // if func haven't body
 	}
 }
 // expressions
@@ -255,7 +268,15 @@ static Expression* unary() {
 	if (tokenMatch(ttMINUS)) {
 		return unaryExpression(opNEGNUM, operand());
 	}
-	return operand();
+	return suffix();
+}
+static Expression* suffix() {
+	Expression *expr = operand();
+	storeCurrentHandler();
+	while (tokenMatch(ttDOT)) { // if match dot, create sub variable expression
+		expr = suffixExpression(expr, operand());
+	}
+	return expr;
 }
 static Expression* operand() { // numbers and strings // високий приорітет
 	Token current = getToken();
@@ -293,7 +314,6 @@ static Expression* operand() { // numbers and strings // високий прио
 			writeError(erEXPECTATION ,")");
 		return result;
 	}
-
 	writeError(erEXPECTATION, "<EXPRESSION>");
 	return NULL;
 }

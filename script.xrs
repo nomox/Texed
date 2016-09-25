@@ -1,14 +1,18 @@
-pi = 3.14
-__print(pi, "\n", "plez", "\n")
-k = 88
-x = k + 1
-
-fn sum(vals) {
-    print "hello "
-    print vals
-    print "\n"
-    return 5+5
+table {
+  inner {
+    fn get() {
+      return _parent.message
+    }
+  }
+  message = "Hello!"
+  a = 0
+  b = 0
+  fn set(a, b) {}
 }
-n = sum(10)
-a = true
-a ? __print(nil)
+fn sqr(x) {
+  return x*2
+}
+table.set(13, 37)
+__print(table.a, " ", table.b)
+print "\n"
+print table.inner.get()
