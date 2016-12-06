@@ -1,8 +1,11 @@
+#include "stdio.h"
 #include "stdlib.h"
 #include "stdbool.h"
+#include "string.h"
 #include "error.h"
 #include "statement.h"
 #include "expression.h"
+#include "function.h"
 #include "memory.h"
 
 static Statement *buildStatement();
@@ -12,20 +15,23 @@ bool loop_begin = false;
 
 static void _assign_stat(Statement *s) {
   StatementAssign *st = s->statement;
+  PreparedVariable var = prepareVariable(st->name);
   expression_value_t *eval = getValueExpression(st->expression);
   // assign controller
   if (eval->type == dtINTEGER)
-    memorySet(newRecordInteger(st->name, eval->value.i));
+    memorySet(var.parent_handler, newRecordInteger(var.name, eval->value.i));
   if (eval->type == dtFLOAT)
-    memorySet(newRecordFloat(st->name, eval->value.f));
+    memorySet(var.parent_handler, newRecordFloat(var.name, eval->value.f));
   if (eval->type == dtSTRING)
-    memorySet(newRecordString(st->name, eval->value.s));
+    memorySet(var.parent_handler, newRecordString(var.name, eval->value.s));
   if (eval->type == dtBOOLEAN)
-    memorySet(newRecordBoolean(st->name, eval->value.b));
+    memorySet(var.parent_handler, newRecordBoolean(var.name, eval->value.b));
   if (eval->type == dtNIL)
-    memorySet(newRecordNil(st->name));
-  //free(st->expression); // звільняєм память щоб нас не сварили
-  //free(st);
+    memorySet(var.parent_handler, newRecordNil(var.name));
+  if (eval->type == dtTABLE)
+    memorySet(var.parent_handler, newRecordTable(var.name, eval->value.table));
+  if (eval->type == dtLIST)
+    memorySet(var.parent_handler, newRecordList(var.name, eval->value.list));
 }
 static void _condition_stat(Statement *s) {
   StatementCondition *st = s->statement;
@@ -67,13 +73,17 @@ static void _print_stat(Statement *s) {
   if (eval->type == dtINTEGER) // print number
     printf("%d", eval->value.i);
   if (eval->type == dtFLOAT) // print number
-    printf("%d", eval->value.f);
+    printf("%g", eval->value.f);
   if (eval->type == dtSTRING) // print string
     printf(eval->value.s);
   if (eval->type == dtBOOLEAN) // print boolean
-    printf((eval->value.b)?"true":"false");
+    printf((eval->value.b)?"<true>":"<false>");
   if (eval->type == dtNIL) // print nil
-    printf("nil");
+    printf("<nil>");
+  if (eval->type == dtTABLE) // print table
+    printf("<table>");
+  if (eval->type == dtLIST) // print list
+    printf("<list>");
   //free(st->expression); // звільняєм память щоб нас не сварили
   //free(st);
 }
@@ -89,8 +99,9 @@ static void _error_stat(Statement *s) {
   exit(0);
 }
 static void _delete_stat(Statement *s) {
-  StatementAssign *st = s->statement;
-  memoryDelete(st->name);
+  StatementDelete *st = s->statement;
+  PreparedVariable var = prepareVariable(st->name);
+  memoryDelete(var.parent_handler, var.name);
 }
 static void _block_stat(Statement *s) {
   // УВАГА! не виконані statement не очищаються
@@ -105,9 +116,7 @@ static void _block_stat(Statement *s) {
     tmp->execute(tmp);
     current = current->next;
   }
-  // TASK: clear list
-  //free(st->list);
-  //free(st);
+  // TODO: clear list
 }
 static void _break_stat(Statement *s) {
   longjmp(jump_buffer, 1);
@@ -117,9 +126,8 @@ static void _continue_stat(Statement *s) {
 }
 static void _funcdef_stat(Statement *s) {
   StatementFuncDef *st = s->statement;
-  createFunction(st->name, st->args, st->func_body);
-  //free(st->expression);
-  //free(st);
+  PreparedVariable var = prepareVariable(st->name);
+  createFunction(var, st->args, st->func_body);
 }
 static void _return_stat(Statement *s) {
   StatementReturn *st = s->statement;
@@ -157,30 +165,57 @@ static void _isfalse_stat(Statement *s) {
 static void _default_stat(Statement *s) {
   StatementDefault *st = s->statement;
   expression_value_t *eval = getValueExpression(st->expression);
-  //free(st->expression);
-  //free(st);
 }
 static void _table_stat(Statement *s) {
   StatementTable *st = s->statement;
-  Record *rec = newRecordTable(st->name, mem_list_init());
-  memorySet(rec);
-  //handler_push(mem_stack, current_handler);
-  memory_node_t *tmp = current_handler;
-  current_handler = (rec->data.table);
-  memorySet(newRecordTable("_parent", tmp));
+  PreparedVariable var = prepareVariable(st->name);
+  memory_node_t *table = NULL;
+  mem_list_push(&table, newRecordNil("$"));
+  Record *rec = newRecordTable(var.name, table); // create new table
+  memorySet(var.parent_handler, rec); // push to current scope
+  memory_node_t *tmp = scope_handler;
+  scope_handler = rec->data.table;
+  memorySet(scope_handler, newRecordTable("_parent", var.parent_handler)); // set parent table link TODO create link record
+  handler_stack_push(&handler_stack, tmp); // restore handler
 }
 static void _closetable_stat(Statement *s) {
-  Record *rec = memoryGet("_parent");
-  current_handler = rec->data.table;
-  //current_handler = handler_pop(mem_stack);
-  /*
-  if (current_handler == NULL)
-    writeError(erNULL, "no block expected");*/
+  scope_handler = handler_stack_pop(&handler_stack); // restore handler
+}
+static void _arrayassign_stat(Statement *s) {
+  StatementArrayAssign *st = s->statement;
+  PreparedVariable var = prepareVariable(st->name);
+  Record *r = memoryGet(var.parent_handler, var.name);
+  if (r->type != dtLIST)
+    writeError(erNOTANARRAY, var.name);
+  list_node_t *list = r->data.list; // get list
+
+  expression_value_t *idxValue = NULL; // current index
+  expression_value_t *elValue = NULL; // elemnt value
+  expression_node_t *current; // current expression
+  int i;
+  for (i = 0, current = st->indices; current != NULL; i++, current = current->next) {
+    if (i > 0) { // skip first iteration
+      elValue = list_get(list, (unsigned int)idxValue->value.list);
+      if (elValue == NULL)
+        writeError(erOUTOFRANGE, var.name);
+      if (elValue->type != dtLIST) // check for list
+        writeError(erNOTANARRAY, var.name);
+      list = elValue->value.list;
+    }
+    idxValue = getValueExpression(current->value); // get index
+    if (idxValue->type != dtINTEGER) // index is value of integer
+      writeError(erEXPECTATION, "<Index> (integer)");
+  }
+  // たび ぴすだ
+  expression_value_t *value = getValueExpression(st->expression);
+  bool result = list_set(list, (unsigned int)idxValue->value.list, value);
+  if (result == false)
+    writeError(erOUTOFRANGE, var.name);
 }
 
 // statement decl
 Statement *AssignStatement(char *name, Expression *expr) {
-  Statement *s = (Statement*)malloc(sizeof(Statement));
+  //Statement *s = (Statement*)malloc(sizeof(Statement));
   StatementAssign *st = (StatementAssign*)malloc(sizeof(StatementAssign));
   st->name = name;
   st->expression = expr;
@@ -200,7 +235,7 @@ Statement *WhileStatement(Expression *expr, Statement *wh_st) {
   return buildStatement(stWHILE, st, &_while_stat);
 }
 Statement *PrintStatement(Expression *expr) {
-  StatementCondition *st = (StatementPrint*)malloc(sizeof(StatementPrint));
+  StatementPrint *st = (StatementPrint*)malloc(sizeof(StatementPrint));
   st->expression = expr;
   return buildStatement(stPRINT, st, &_print_stat);
 }
@@ -260,10 +295,19 @@ Statement *TableStatement(char *name) {
   StatementTable *st = (StatementTable*)malloc(sizeof(StatementTable));
   st->name = malloc(strlen(name));
   strcpy(st->name, name);
+  //free(name); // clear allocated in variableGet()
   return buildStatement(stTABLE, st, &_table_stat);
 }
 Statement *CloseTableStatement() {
   return buildStatement(stCLOSETABLE, NULL, &_closetable_stat);
+}
+Statement *ArrayAssignStatement(char *name, expression_node_t *indices, Expression *expr) {
+  //Statement *s = (Statement*)malloc(sizeof(Statement));
+  StatementArrayAssign *st = (StatementArrayAssign*)malloc(sizeof(StatementArrayAssign));
+  st->name = name;
+  st->indices = indices;
+  st->expression = expr;
+  return buildStatement(stASSIGN, st, &_arrayassign_stat);
 }
 
 // statement builder

@@ -77,6 +77,11 @@ typedef struct STATEMENT_DEFAULT {
 typedef struct STATEMENT_TABLE {
   char *name;
 } StatementTable;
+typedef struct STATEMENT_ARRAYASSIGN {
+  char *name; // array variable
+  expression_node_t *indices; // index
+  Expression *expression; // assignment value
+} StatementArrayAssign;
 
 Statement *AssignStatement(char*, Expression*);
 Statement *ConditionStatement(Expression*, Statement*, Statement*);
@@ -94,6 +99,7 @@ Statement *IfFalseStatement(Expression*, Statement*);
 Statement *DefaultStatement(Expression*);
 Statement *TableStatement(char*);
 Statement *CloseTableStatement();
+Statement *ArrayAssignStatement(char*, expression_node_t*, Expression*);
 
 // return utils
 jmp_buf jump_return;

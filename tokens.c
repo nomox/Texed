@@ -48,7 +48,7 @@ Token getTokenAt(int offset) {
 }
 Token getTokenWithout(int offset, TokenType type) {
 	int i;
-	for (i = offset; getTokenAt(i).type == type;i++); // лічильник
+	for (i = offset; getTokenAt(i).type == type;i++); // skip token
 	return getTokenAt(i);
 }
 Token getToken() {
@@ -68,6 +68,13 @@ bool tokenMatch(TokenType type) {
 		return false;
 	current_position++;
 	return true;
+}
+bool tokenMatch2(TokenType type1, TokenType type2) {
+	if (type1 == getTokenAt(0).type && type2 == getTokenAt(1).type) {
+		current_position += 2;
+		return true;
+	}
+	return false;
 }
 void tokenSkip(TokenType type) {
 	while (tokenMatch(ttEOL));

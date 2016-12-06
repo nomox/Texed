@@ -1,44 +1,53 @@
+#include "stdio.h"
 #include "stdlib.h"
 #include "stdbool.h"
 #include "string.h"
 #include "memory.h"
 #include "error.h"
 
-static int position = 0;
-static int mem_size;
-/*
-static Record *current_local = NULL; // parent record for storing
-static Record *local_record;*/
+#define VAR_SEPARATOR "."
 
-static memory_node_t *getNodeByName(memory_node_t*, char*);
-static void mem_list_push(memory_node_t*, Record*);
+static memory_node_t *getNodeByName(memory_node_t*, const char*);
 
-void memoryInit(int size) { // ініціалізація пам'яті !!!
+void memoryInit() { // ініціалізація пам'яті !!!
   // init list
-  memory_handler = mem_list_init();
-  mem_list_push(memory_handler, newRecordNil("$"));
-  current_handler = memory_handler;
+  memory_handler = NULL;
+  mem_list_push(&memory_handler, newRecordNil("$"));
+  scope_handler = memory_handler;
+
+  handler_stack = NULL;
 }
-void memorySet(Record *record) {
-  memory_node_t *node = getNodeByName(current_handler, record->name);
+void memorySet(memory_node_t *parent_handler, Record *record) {
+  /**
+	* @param parent_handler - parent table, record - new record
+	*/
+  memory_node_t *node = getNodeByName(parent_handler, record->name);
   if (node != NULL) {
-    node->record = record; // mb need to clear record and assign it again
+    node->record = record; // check for assign type
   }
   else {
-    mem_list_push(current_handler, record);
+    mem_list_push(&parent_handler, record);
   }
   //free(record);
 }
-Record *memoryGet(const char *name) {
-  memory_node_t *node = getNodeByName(current_handler, name);
+Record *memoryGet(memory_node_t *parent_handler, const char *name) {
+  /**
+	* @param parent_handler - parent table, name - variable name
+  * @return Record
+	*/
+  memory_node_t *node = getNodeByName(parent_handler, name);
   if (node != NULL) {
     return node->record;
   }
   else
     writeError(erVARNOTEXIST, name);
+  return NULL;
 }
-void memoryDelete(const char *name) {
-  memory_node_t *current = current_handler;
+void memoryDelete(memory_node_t *parent_handler, const char *name) {
+  /**
+	* @param parent_handler - parent table, name - variable name
+	*/
+  memory_node_t *current = parent_handler;
   bool exist = false;
   Record *r;
   Record *r_del;
@@ -46,8 +55,9 @@ void memoryDelete(const char *name) {
     if (current->next != NULL)
     r = current->next->record;
     if (current != NULL && !strcmp(r->name, name)) { // !можливо потрібно перевірити екземпляр Record
+      // TODO compare pointer address
       exist = true;
-      r_del = current->next;
+      r_del = current->record; // FIXED!
       if (current->next->next != NULL)
         current->next = current->next->next;
       else
@@ -61,7 +71,7 @@ void memoryDelete(const char *name) {
   free(r_del);
 }
 
-static memory_node_t *getNodeByName(memory_node_t *node, char *name) {
+static memory_node_t *getNodeByName(memory_node_t *node, const char *name) {
   memory_node_t *current = node;
   Record *r;
   while (current != NULL) {
@@ -75,63 +85,142 @@ static memory_node_t *getNodeByName(memory_node_t *node, char *name) {
 }
 
 // for linked list
-memory_node_t *mem_list_init() {
-  memory_node_t *node = (memory_node_t*)malloc(sizeof(memory_node_t));
-	node->record = NULL;
-	node->next = NULL;
-	return node;
-}
-static void mem_list_push(memory_node_t *node, Record *rec) {
-  memory_node_t *current = node;
-  if (current->record == NULL) { // check for first element
-    current->record = rec;
+void mem_list_push(memory_node_t **node, Record *rec) {
+  if (*node == NULL) {
+    *node = malloc(sizeof(memory_node_t));
+    (*node)->record = rec;
+    (*node)->next = NULL;
     return;
   }
+  memory_node_t *current = *node;
   while (current->next != NULL) {
-      current = current->next;
+    current = current->next;
   }
-  current->next = (memory_node_t*)malloc(sizeof(memory_node_t));
+  current->next = malloc(sizeof(memory_node_t));
   current->next->record = rec;
   current->next->next = NULL;
 }
 // mem stack
-handler_node_t *handler_list_init() {
-  handler_node_t *node = (handler_node_t*)malloc(sizeof(handler_node_t));
-	node->handler = NULL;
-	node->next = NULL;
-	return node;
+void handler_stack_push(handler_stack_t **head, memory_node_t *value) {
+  handler_stack_t *temp = (handler_stack_t*)malloc(sizeof(handler_stack_t));
+  temp->value = value;
+  temp->next = *head;
+  *head = temp;
 }
-void handler_push(handler_node_t *node, memory_node_t *mem) {
-  handler_node_t *current = node;
-  if (current->handler == NULL) { // check for first element
-    current->handler = mem;
+memory_node_t *handler_stack_pop(handler_stack_t **head) {
+  if (*head == NULL) {
+    printf("Stack is empty\n");
+    exit(0);
+  }
+  memory_node_t *item;
+  handler_stack_t *temp = *head;
+  item = (*head)->value;
+  *head = (*head)->next;
+  free(temp);
+  return item;
+}
+
+// list
+
+void list_push(list_node_t **head, expression_value_t *value) {
+  /**
+	* @param head - list handler, value
+	*/
+  if (list_empty(*head)) {
+    *head = malloc(sizeof(list_node_t));
+    (*head)->value = value;
+    (*head)->next = NULL;
     return;
   }
+  list_node_t *current = *head;
   while (current->next != NULL) {
-      current = current->next;
+    current = current->next;
   }
-  current->next = (handler_node_t*)malloc(sizeof(handler_node_t));
-  current->next->handler = mem;
+  current->next = malloc(sizeof(list_node_t));
+  current->next->value = value;
   current->next->next = NULL;
 }
-memory_node_t *handler_get_last(handler_node_t *node) {
-  handler_node_t *current = node;
-  while (current->next != NULL)
-    current = current->next;
-  return current->handler;
+expression_value_t *list_get(list_node_t *head, unsigned int pos) {
+  /**
+	* @param head - list handler, pos - postion of element
+  * @return value, NULL if out of range
+	*/
+  int length = 0;
+  for(list_node_t *current = head; current != NULL; current = current->next, length++) {
+    if (length == pos)
+      return current->value;
+  }
+  return NULL;
 }
-memory_node_t *handler_pop(handler_node_t *node) {
-  handler_node_t *current = node;
-  printf("HELLO\n");
-  if (current->next == NULL)
-    return current->handler;
-  printf("PSHEL VON\n");
-  while (current->next->next != NULL)
-    current = current->next;
-  free(current->next);
-  current->next = NULL;
-  return current->handler;
+bool list_set(list_node_t *head, unsigned int pos, expression_value_t *value) {
+  /**
+	* @param head - list handler, pos - postion of element
+  * @return true if success, false if out of range
+	*/
+  int length = 0;
+  for(list_node_t *current = head; current != NULL; current = current->next, length++) {
+    if (length == pos) {
+      current->value = value;
+      return true;
+    }
+  }
+  return false;
 }
+bool list_remove(list_node_t **head, int pos) {
+  /**
+	* @param head - list handler, pos - postion of element
+  * @return true if success
+	*/
+  list_node_t *current = *head;
+  list_node_t *temp_node = NULL;
+
+  for (int i = 0; i < pos-1; i++) {
+    if (current->next == NULL) {
+      return false;
+    }
+    current = current->next;
+  }
+  temp_node = current->next;
+  current->next = temp_node->next;
+  free(temp_node);
+  return true;
+}
+int list_size(list_node_t *head) {
+  /**
+	* @param head - list handler
+  * @return size of list, elements count
+	*/
+  int length = 0;
+  for(list_node_t *current = head; current != NULL; current = current->next, length++);
+  return length;
+}
+bool list_empty(list_node_t *head) {
+  /**
+	* @param head - list handler
+  * @return true if list is empty
+	*/
+  return (head == NULL);
+}
+
+// get PreparedVariable
+PreparedVariable prepareVariable(char *name) {
+  PreparedVariable var;
+  memory_node_t *current_table = scope_handler;
+  char *tok = strtok(name, VAR_SEPARATOR);
+  char *last = tok;
+  Record *r = NULL;
+  while ((tok = strtok(NULL, VAR_SEPARATOR)) != NULL) {
+		r = memoryGet(current_table, last); // get table
+		if (r->type != dtTABLE) // for first iteration
+			writeError(erEXPECTATION, "<TABLE>");
+		current_table = r->data.table;
+    last = tok;
+  }
+  var.parent_handler = current_table;
+	var.name = last;
+  return var;
+}
+
 // tools
 Record *newRecordInteger(char *name, int number) {
   Record *record;
@@ -186,6 +275,14 @@ Record *newRecordTable(char *name, memory_node_t *table) {
   record->name = name;
   record->type = dtTABLE;
   record->data.table = table;
+  return record;
+}
+Record *newRecordList(char *name, list_node_t *list) {
+  Record *record;
+  record = (Record*)malloc(sizeof(Record));
+  record->name = name;
+  record->type = dtLIST;
+  record->data.list = list;
   return record;
 }
 Record *newRecordValue(char *name, expression_value_t *val) {

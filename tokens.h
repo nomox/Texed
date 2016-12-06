@@ -15,5 +15,6 @@ Token getToken();
 Token getTokenAt(int);
 Token getTokenWithout(int, TokenType);
 bool tokenMatch(TokenType);
+bool tokenMatch2(TokenType type1, TokenType type2);
 void tokenSkip(TokenType);
 int getLine();

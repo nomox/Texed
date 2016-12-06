@@ -1,8 +1,9 @@
+#include "stdio.h"
+#include "stdlib.h"
 #include "error.h"
 #include "tokens.h"
 
-write_errors = 0;
-void writeError(ErrorType et, char *msg) {
+void writeError(ErrorType et, const char *msg) {
 	if (write_errors)
 		switch (et) {
 		case erVARNOTEXIST: printf("\nError: \"%s\" not defined (at line %d)", msg, getLine());
@@ -17,7 +18,11 @@ void writeError(ErrorType et, char *msg) {
 				break;
 		case erUNKNOWNLEXEM: printf("\nError: Unknown lexem '%s' (at line %d)", msg, getLine());
 				break;
-		case erUNKNOWNFUNC: printf("\nError: '%s' not a function (at line %d)", msg, getLine());
+		case erUNKNOWNFUNC: printf("\nError: '%s' not an function (at line %d)", msg, getLine());
+				break;
+		case erNOTANARRAY: printf("\nError: '%s' not an array (at line %d)", msg, getLine());
+				break;
+		case erOUTOFRANGE: printf("\nError: '%s' array out of range (at line %d)", msg, getLine());
 				break;
 		case erFUNCNOTINIT: printf("\nError: function '%s' not initialized (at line %d)", msg, getLine());
 				break;

@@ -1,0 +1,14 @@
+String {
+  fn length(str) {
+    return __strlength(str)
+  }
+  fn concat(str1, str2) {
+    return __strcat(str1, str2)
+  }
+  fn toInteger(str) {
+    return __strtoint(str)
+  }
+  fn toNumber(str) {
+    return __strtonumber(str)
+  }
+}

@@ -13,7 +13,6 @@ typedef struct FUNCTION {
 } Function;
 
 void createSystemFunction(char*, void*);
-void createFunction(char*, char*, Statement*);
-struct expression_value *callFunction(char*, struct expression_value**, int);
-
+void createFunction(PreparedVariable, char*, Statement*);
+struct expression_value *callFunction(PreparedVariable, struct expression_value**, int);
 #endif FUNCTION_H

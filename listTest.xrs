@@ -1,0 +1,12 @@
+print "Input elements count: "
+count = __strtoint(__read())
+print "\n"
+list = []
+i = 1
+while i <= count {
+  print i
+  print ": "
+  el = __strtoint(__read())
+  __listpush(list, el)
+  i = i + 1
+}

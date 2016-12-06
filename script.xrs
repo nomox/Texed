@@ -1,18 +1,24 @@
-table {
-  inner {
-    fn get() {
-      return _parent.message
-    }
-  }
-  message = "Hello!"
-  a = 0
-  b = 0
-  fn set(a, b) {}
+fn inc(v) {
+  return v + 1
 }
-fn sqr(x) {
-  return x*2
-}
-table.set(13, 37)
-__print(table.a, " ", table.b)
+print "Input elements count: "
+count = __strtoint(__read())
 print "\n"
-print table.inner.get()
+list = [nil]
+i = 1
+while i <= count {
+  print i
+  print ": "
+  el = __strtonumber(__read())
+  el = __sqrt(el)
+  __listpush(list, el)
+  i = inc(i)
+}
+print "\n"
+
+j = 1
+while j <= count {
+  print list[j]
+  print ", "
+  j = inc(j)
+}

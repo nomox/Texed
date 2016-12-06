@@ -14,7 +14,7 @@ static expression_value_t *_get_int(Expression *e) {
   return valueInteger(ex->number);
 }
 static expression_value_t *_get_float(Expression *e) {
-  ExpressionFloat *ex = e->expression;
+  ExpressionNumber *ex = e->expression;
   return valueFloat(ex->number);
 }
 static expression_value_t *_get_str(Expression *e) {
@@ -31,37 +31,30 @@ static expression_value_t *_get_nil(Expression *e) { // fix: bool to int
 // variable
 static expression_value_t *_get_var(Expression *e) { // fix: bool to int
   ExpressionVariable *ex = e->expression;
-  Record r = *memoryGet(ex->name);
-  if (r.type == dtINTEGER) {
-    return valueInteger(r.data.i);
+  PreparedVariable var = prepareVariable(ex->name);
+  Record *r = memoryGet(var.parent_handler, var.name);
+  if (r->type == dtINTEGER) {
+    return valueInteger(r->data.i);
   }
-  if (r.type == dtFLOAT) {
-    return valueFloat(r.data.f);
+  if (r->type == dtFLOAT) {
+    return valueFloat(r->data.f);
   }
-  if (r.type == dtSTRING) {
-    return valueString(r.data.s);
+  if (r->type == dtSTRING) {
+    return valueString(r->data.s);
   }
-  if (r.type == dtBOOLEAN) {
-    return valueBoolean(r.data.b);
+  if (r->type == dtBOOLEAN) {
+    return valueBoolean(r->data.b);
   }
-  if (r.type == dtNIL) {
+  if (r->type == dtNIL) {
     return valueNil();
   }
-  if (r.type == dtTABLE) {
-    return valueTable(r.data.table);
+  if (r->type == dtTABLE) {
+    return valueTable(r->data.table);
   }
-}
-static expression_value_t *_get_suffix(Expression *e) {
-  ExpressionSuffix *ex = e->expression;
-  expression_value_t *table = getValueExpression(ex->expr1);
-  if (table->type != dtTABLE) // constructor
-    writeError(erEXPECTATION, "<TABLE>");
-  current_handler = table->value.table;
-  expression_value_t *res = getValueExpression(ex->expr2);
-  if (restore_handler == NULL)
-    writeError(erNULL, "restore handler is NULL");
-  current_handler = restore_handler;
-  return res;
+  if (r->type == dtLIST) {
+    return valueList(r->data.list);
+  }
+  return NULL;
 }
 // operators
 static expression_value_t *_get_unary(Expression *e) {
@@ -69,6 +62,7 @@ static expression_value_t *_get_unary(Expression *e) {
   expression_value_t *eval = getValueExpression(ex->expr);
   if (ex->operation == opNEGNUM)
     return valueInteger(-(eval->value.i));
+  return NULL;
 }
 static expression_value_t *_get_binary(Expression *e) {
   ExpressionBinary *ex = e->expression;
@@ -87,6 +81,8 @@ static expression_value_t *_get_binary(Expression *e) {
     return valueInteger(eval1->value.i / eval2->value.i);
   case opADD:
     return valueInteger(eval1->value.i + eval2->value.i);
+  default:
+    return NULL;
   }
 }
 static expression_value_t *_get_conditional(Expression *e) {
@@ -97,15 +93,24 @@ static expression_value_t *_get_conditional(Expression *e) {
   switch (ex->operation) {
     case opEQ:
       return valueBoolean(eval1->value.i == eval2->value.i);
+    case opNEQ:
+      return valueBoolean(eval1->value.i != eval2->value.i);
     case opGRTH:
       return valueBoolean(eval1->value.i > eval2->value.i);
     case opLSTH:
       return valueBoolean(eval1->value.i < eval2->value.i);
+    case opGREQ:
+      return valueBoolean(eval1->value.i >= eval2->value.i);
+    case opLSEQ:
+      return valueBoolean(eval1->value.i <= eval2->value.i);
+    default:
+      return NULL;
   }
 }
 // function
 static expression_value_t *_get_function(Expression *e) {
   ExpressionFunction *ex = e->expression;
+  PreparedVariable var = prepareVariable(ex->name);
   int arg_len = expression_length(ex->args);
   expression_value_t **args = malloc(arg_len); // create args array
   Expression *tmp;
@@ -115,15 +120,52 @@ static expression_value_t *_get_function(Expression *e) {
     tmp = current->value;
     args[i] = tmp->get(tmp);
   }
-  return callFunction(ex->name, args, arg_len);
+  return callFunction(var, args, arg_len);
+}
+static expression_value_t *_get_list(Expression *e) {
+  ExpressionList *ex = e->expression;
+  list_node_t *list = NULL;
+  Expression *tmp;
+  expression_node_t *current;
+  for (current = ex->elements; current != NULL; current = current->next) {
+    tmp = current->value;
+    list_push(&list, getValueExpression(tmp));
+  }
+  return valueList(list);
+}
+static expression_value_t *_get_element(Expression *e) {
+  ExpressionElement *ex = e->expression;
+  PreparedVariable var = prepareVariable(ex->name);
+  Record *r = memoryGet(var.parent_handler, var.name); // get list
+  if (r->type != dtLIST) // check for list
+    writeError(erNOTANARRAY, var.name);
+  list_node_t *list = r->data.list;
+
+  expression_value_t *idxValue = NULL; // current index
+  expression_value_t *elValue = NULL; // elemnt value
+  expression_node_t *current; // current expression
+  int i;
+  for (i = 0, current = ex->indices; current != NULL; i++, current = current->next) {
+    if (i > 0) { // skip first iteration
+      if (elValue->type != dtLIST) // check for list
+        writeError(erNOTANARRAY, var.name);
+      list = elValue->value.list;
+    }
+    idxValue = getValueExpression(current->value); // get index
+    if (idxValue->type != dtINTEGER) // index is value of integer
+      writeError(erEXPECTATION, "<Index> (integer)");
+    elValue = list_get(list, (unsigned int)idxValue->value.list);
+    if (elValue == NULL)
+      writeError(erOUTOFRANGE, var.name);
+  }
+  return elValue;
 }
 
 // вирази для пацанів
 // variable expression
 Expression* variableExpression(char *name) {
   ExpressionVariable *e = (ExpressionVariable*)malloc(sizeof(ExpressionVariable));
-  e->name = malloc(strlen(name));
-  strcpy(e->name, name);
+  e->name = name;
   return buildExpression(e, &_get_var);
 }
 // basic expression (for all data types)
@@ -133,7 +175,7 @@ Expression* integerExpression(int number) {
   return buildExpression(e, &_get_int);
 }
 Expression* floatExpression(double number) {
-  ExpressionFloat *e = (ExpressionFloat*)malloc(sizeof(ExpressionFloat));
+  ExpressionNumber *e = (ExpressionNumber*)malloc(sizeof(ExpressionNumber));
   e->number = number;
   return buildExpression(e, &_get_float);
 }
@@ -176,16 +218,20 @@ Expression* conditionalExpression(Operation operation, Expression *expr1, Expres
 }
 Expression* functionExpression(char *name, expression_node_t *args) {
   ExpressionFunction *e = (ExpressionFunction*)malloc(sizeof(ExpressionFunction));
-  e->name = malloc(strlen(name));
-  strcpy(e->name, name);
+  e->name = name;
   e->args = args;
   return buildExpression(e, &_get_function);
 }
-Expression* suffixExpression(Expression *expr1, Expression *expr2) {
-  ExpressionSuffix *e = (ExpressionSuffix*)malloc(sizeof(ExpressionSuffix));
-  e->expr1 = expr1;
-  e->expr2 = expr2;
-  return buildExpression(e, &_get_suffix);
+Expression* listExpression(expression_node_t *elements) {
+  ExpressionList *e = (ExpressionList*)malloc(sizeof(ExpressionList));
+  e->elements = elements;
+  return buildExpression(e, &_get_list);
+}
+Expression* elementExpression(char *name, expression_node_t *indices) {
+  ExpressionElement *e = (ExpressionElement*)malloc(sizeof(ExpressionElement));
+  e->name = name;
+  e->indices = indices;
+  return buildExpression(e, &_get_element);
 }
 
 // builder
@@ -233,32 +279,29 @@ expression_value_t *valueTable(memory_node_t *table) {
   ev->value.table = table;
   return ev;
 }
+expression_value_t *valueList(list_node_t *list) {
+  expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
+  ev->type = dtLIST;
+  ev->value.list = list;
+  return ev;
+}
 expression_value_t *getValueExpression(Expression *e) {
   return e->get(e);
 }
-void storeCurrentHandler() {
-  restore_handler = current_handler;
-}
-// tools
-expression_node_t *expression_init() {
-  expression_node_t *node = (expression_node_t*)malloc(sizeof(expression_node_t));
-	node->value = NULL;
-	node->next = NULL;
-	return node;
-}
-void expression_push(expression_node_t *node, Expression *expr){
-  statement_node_t *current = node;
 
-  if (current->value == NULL) { // check for first element
-    current->value = expr;
+// tools
+void expression_push(expression_node_t **node, Expression *expr){
+  if (*node == NULL) {
+    *node = malloc(sizeof(expression_node_t));
+    (*node)->value = expr;
+    (*node)->next = NULL;
     return;
   }
-
+  expression_node_t *current = *node;
   while (current->next != NULL) {
-      current = current->next;
+    current = current->next;
   }
-
-  current->next = (expression_node_t*)malloc(sizeof(expression_node_t));
+  current->next = malloc(sizeof(expression_node_t));
   current->next->value = expr;
   current->next->next = NULL;
 }

@@ -11,9 +11,11 @@ typedef enum ERRORTYPE {
 	erEXPECTATION,
 	erUNKNOWNLEXEM,
 	erUNKNOWNFUNC,
+	erNOTANARRAY,
 	erFUNCNOTINIT,
-	erARGMISMATCH
+	erARGMISMATCH,
+	erOUTOFRANGE
 } ErrorType;
 
 int write_errors;
-void writeError(ErrorType et, char *msg);
+void writeError(ErrorType et, const char *msg);
