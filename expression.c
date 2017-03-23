@@ -54,6 +54,9 @@ static expression_value_t *_get_var(Expression *e) { // fix: bool to int
   if (r->type == dtLIST) {
     return valueList(r->data.list);
   }
+  if (r->type == dtFUNCTION) {
+    return valueFunction(r->data.fn);
+  }
   return NULL;
 }
 // operators
@@ -283,6 +286,12 @@ expression_value_t *valueList(list_node_t *list) {
   expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
   ev->type = dtLIST;
   ev->value.list = list;
+  return ev;
+}
+expression_value_t *valueFunction(Function *function) {
+  expression_value_t *ev = (expression_value_t*)malloc(sizeof(expression_value_t));
+  ev->type = dtFUNCTION;
+  ev->value.fn = function;
   return ev;
 }
 expression_value_t *getValueExpression(Expression *e) {

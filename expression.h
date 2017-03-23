@@ -93,6 +93,7 @@ expression_value_t *valueString(char*);
 expression_value_t *valueNil();
 expression_value_t *valueTable(memory_node_t*);
 expression_value_t *valueList(list_node_t*);
+expression_value_t *valueFunction(struct FUNCTION*);
 expression_value_t *getValueExpression(Expression*);
 // list
 void expression_push(expression_node_t**, Expression*);

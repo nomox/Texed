@@ -16,6 +16,7 @@ static Statement *statementPreferred();
 static Statement *assignmentStatement();
 static Statement *conditionalStatement();
 static Statement *whileStatement();
+static Statement *forStatement();
 static Statement *funcDefine();
 static Statement *defaultStatement();
 
@@ -90,6 +91,9 @@ static Statement *statement() {
 	}
 	if (tokenMatch(ttWHILE)) {
 		return whileStatement();
+	}
+	if (tokenMatch(ttFOR)) {
+		return forStatement();
 	}
 	if (tokenMatch(ttFNDEF)) {
 		return funcDefine();
@@ -177,6 +181,17 @@ static Statement *whileStatement() {
 	tokenSkip(ttEOL);
 	Statement *whStatement = statementPreferred();
 	return WhileStatement(expr, whStatement);
+}
+static Statement *forStatement() {
+	Token index = getToken();
+	if (!tokenMatch(ttVARIABLE)) // match variable
+		writeError(erEXPECTATION, "<Variable>");
+	if (!tokenMatch(ttIN))
+		writeError(erEXPECTATION, "in");
+	Expression *expr = expression();
+	tokenSkip(ttEOL);
+	Statement *frStatement = statementPreferred();
+	return ForStatement(index.value, expr, frStatement);
 }
 static Statement *funcDefine() {
 	char *var = variableGet();

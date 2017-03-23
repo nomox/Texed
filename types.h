@@ -46,10 +46,11 @@ typedef enum TOKENTYPE
 	ttELSE, // else
 	ttSWITCH, // switch
 	ttCASE, // case
-
+	// loops
 	ttFOR, // for
 	ttWHILE, // while
 	ttDO, // do 40
+	ttIN, // in
 	ttBREAK, // break
 	ttCONTINUE, // contunue
 	// reserved words
@@ -59,8 +60,8 @@ typedef enum TOKENTYPE
 	ttTHIS, // this
 	ttSELF, // self
 	ttUSE, // use
-	ttNIL, // nil
-	ttTRUE, // true 50
+	ttNIL, // nil 50
+	ttTRUE, // true
 	ttFALSE, // false
 	ttPRINT, // print
 	ttERROR, // error

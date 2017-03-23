@@ -1,24 +1,6 @@
-fn inc(v) {
-  return v + 1
-}
-print "Input elements count: "
-count = __strtoint(__read())
-print "\n"
-list = [nil]
-i = 1
-while i <= count {
-  print i
-  print ": "
-  el = __strtonumber(__read())
-  el = __sqrt(el)
-  __listpush(list, el)
-  i = inc(i)
-}
-print "\n"
+list = [0]
+__listpush(list, 3)
 
-j = 1
-while j <= count {
-  print list[j]
-  print ", "
-  j = inc(j)
-}
+for i in list
+  __print(i, "\n")
+__print("size: ", __listsize(list))

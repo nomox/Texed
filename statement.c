@@ -32,6 +32,8 @@ static void _assign_stat(Statement *s) {
     memorySet(var.parent_handler, newRecordTable(var.name, eval->value.table));
   if (eval->type == dtLIST)
     memorySet(var.parent_handler, newRecordList(var.name, eval->value.list));
+  if (eval->type == dtFUNCTION)
+    memorySet(var.parent_handler, newRecordFunction(var.name, eval->value.fn));
 }
 static void _condition_stat(Statement *s) {
   StatementCondition *st = s->statement;
@@ -66,10 +68,23 @@ static void _while_stat(Statement *s) {
   //free(st->expression);
   //free(st);
 }
+static void _for_stat(Statement *s) {
+  StatementFor *st = s->statement;
+  expression_value_t *eval = getValueExpression(st->expr);
+  if (eval->type != dtLIST)
+    writeError(erEXPECTATION, "<list>");
+  for (int i = 0; i < list_size(eval->value.list); i++) {
+    memorySet(scope_handler, newRecordValue(st->name, list_get(eval->value.list, i)));
+    int b_val = setjmp(jump_buffer);
+    if (!b_val) {
+      st->forSt->execute(st->forSt);
+    }
+    if (b_val == 1) break;
+  }
+}
 static void _print_stat(Statement *s) {
   StatementPrint *st = s->statement;
   expression_value_t *eval = getValueExpression(st->expression);
-
   if (eval->type == dtINTEGER) // print number
     printf("%d", eval->value.i);
   if (eval->type == dtFLOAT) // print number
@@ -84,6 +99,8 @@ static void _print_stat(Statement *s) {
     printf("<table>");
   if (eval->type == dtLIST) // print list
     printf("<list>");
+  if (eval->type == dtFUNCTION) // print function
+    printf("<fuction>");
   //free(st->expression); // звільняєм память щоб нас не сварили
   //free(st);
 }
@@ -233,6 +250,13 @@ Statement *WhileStatement(Expression *expr, Statement *wh_st) {
   st->expression = expr;
   st->whileSt = wh_st;
   return buildStatement(stWHILE, st, &_while_stat);
+}
+Statement *ForStatement(char *name, Expression *expr, Statement *forSt) {
+  StatementFor *st = (StatementFor*)malloc(sizeof(StatementFor));
+  st->name = name;
+  st->expr = expr;
+  st->forSt = forSt;
+  return buildStatement(stFOR, st, &_for_stat);
 }
 Statement *PrintStatement(Expression *expr) {
   StatementPrint *st = (StatementPrint*)malloc(sizeof(StatementPrint));

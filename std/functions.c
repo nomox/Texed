@@ -26,8 +26,14 @@ expression_value_t *_print(expression_value_t *args[], int arg_length) {
 			case dtTABLE:
 			  printf("<table>");
 				break;
+			case dtLIST:
+				printf("<list>");
+				break;
+			case dtFUNCTION:
+				printf("<fuction>");
+				break;
 			default:
-				return valueNil();
+				printf("<?>");
 		}
 	}
 	return valueNil();

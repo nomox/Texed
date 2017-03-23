@@ -8,6 +8,7 @@ typedef enum STATEMENTTYPE {
   stASSIGN,
   stCONDITION,
   stWHILE,
+  stFOR,
   stPRINT,
   stERROR,
   stDELETE,
@@ -26,7 +27,7 @@ typedef enum STATEMENTTYPE {
 typedef struct STATEMENT {
   StatementType type;
   void* statement;
-  void* (*execute)(struct Statement*);
+  void* (*execute)(struct STATEMENT*);
 } Statement;
 // statements
 typedef struct STATEMENT_ASSIGN {
@@ -42,6 +43,11 @@ typedef struct STATEMENT_WHILE {
   Expression *expression;
   Statement *whileSt;
 } StatementWhile;
+typedef struct STATEMENT_FOR {
+  char *name;
+  Expression *expr;
+  Statement *forSt;
+} StatementFor;
 //opearators
 typedef struct STATEMENT_PRINT {
   Expression *expression;
@@ -86,6 +92,7 @@ typedef struct STATEMENT_ARRAYASSIGN {
 Statement *AssignStatement(char*, Expression*);
 Statement *ConditionStatement(Expression*, Statement*, Statement*);
 Statement *WhileStatement(Expression*, Statement*);
+Statement *ForStatement(char*, Expression*, Statement*);
 Statement *PrintStatement(Expression*);
 Statement *ErrorStatement(Expression*);
 Statement *DeleteStatement(char*);

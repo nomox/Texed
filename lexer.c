@@ -74,7 +74,8 @@ static const char *WORD_STRINGS[] = {
 	"delete",
 	"break",
 	"continue",
-	"return"
+	"return",
+	"in"
 };
 static const TokenType WORD_TOKEN[] = {
 	ttIF,
@@ -99,7 +100,8 @@ static const TokenType WORD_TOKEN[] = {
 	ttDELETE,
 	ttBREAK,
 	ttCONTINUE,
-	ttRETURN
+	ttRETURN,
+	ttIN
 };
 static bool skip = false;
 static int nline = 0;
