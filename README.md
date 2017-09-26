@@ -1,10 +1,4 @@
-**X++ interpreter written on C**
-*Roflan*
-[vk.com/nomox](https://vk.com/nomox)
-
 ## Version history:
-### Alpha
-
 * 0.1
   > Lexer
 * 0.1.1
